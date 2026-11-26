@@ -1,8 +1,8 @@
-<div align="center">
-
-[![Programı İndir](https://img.shields.io/badge/PROGRAMI_%C4%B0ND%C4%B0R-Windows_10%2F11-16A34A?style=for-the-badge)](https://github.com/c4brky/SHIFT-APP/releases/latest/download/shift_hazirlayici.exe)
-
-</div>
+<p align="center">
+  <a href="https://github.com/c4brky/SHIFT-APP/releases/latest/download/shift_hazirlayici.exe">
+    <img src="https://img.shields.io/badge/PROGRAMI_INDIR-WINDOWS-16A34A?style=for-the-badge" alt="Programı İndir" />
+  </a>
+</p>
 
 # Shift Hazırlayıcı
 

@@ -1,4 +1,4 @@
-<p align="center">
+<p align="left">
   <a href="https://github.com/c4brky/SHIFT-APP/releases/latest/download/shift_hazirlayici.exe">
     <img src="assets/download.svg" alt="PROGRAMI İNDİR" />
   </a>

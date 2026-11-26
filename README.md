@@ -1,6 +1,12 @@
 # SHIFT MAKER
 
-**TR** | [English](#english)
+[Türkçe](#turkce) | [English](#english)
+
+---
+
+| in App View | App Costumize | Shift Customize | Output Result |
+|---|---|---|---|
+| ![in-app-view](assets/in-app-view.png) | ![app-customize](assets/app-costumize.png) | ![shift-customize](assets/shift-costumize.png) | ![output-result](assets/output-result.png) |
 
 ---
 
@@ -20,12 +26,6 @@ Haftalık shift programı oluşturucu. Mağaza, ofis veya ekip için seçtiğini
 
 > [!TIP]
 > **Nasıl Açılır?** Uyarı penceresinde **"Ek bilgi"** yazısına tıklayıp **"Yine de çalıştır"** butonuna basarak programı güvenle başlatabilirsiniz. *(İsterseniz indirilen `.exe` dosyasına Sağ Tık → Özellikler → **Engeli kaldır** diyerek uyarıyı kalıcı olarak kapatabilirsiniz.)*
-
-### Ekran Görüntüleri
-
-| Uygulama Arayüzü | Shift Sonucu |
-|---|---|
-| ![Uygulama](assets/in-app-view.png) | ![Shift Sonucu](assets/output-result.png) |
 
 ### Özellikler
 
@@ -79,6 +79,11 @@ Weekly shift schedule generator. Creates an automated, fair, and customizable **
 - **Fairness algorithm** and **last 2 weeks** similarity prevention
 - **Full shift** optional per-day assignment and **customizable work hours** (07:00 – 22:00, 15-min steps)
 - **Auto-save & History** with one-click clear all history
+
+### Setup
+
+> [!NOTE]
+> **Ready-to-use Exe (Recommended):** You can download the `shiftmaker.exe` file from the **Releases** section or by clicking the **DOWNLOAD** button above, then simply double-click it to run. The **.NET Runtime is embedded**, so no additional installation or internet connection is required.
 
 ---
 

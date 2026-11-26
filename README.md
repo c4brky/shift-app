@@ -1,3 +1,9 @@
+<div align="center">
+
+[![Programı İndir](https://img.shields.io/badge/PROGRAMI_%C4%B0ND%C4%B0R-Windows_10%2F11-16A34A?style=for-the-badge)](https://github.com/c4brky/SHIFT-APP/releases/latest/download/shift_hazirlayici.exe)
+
+</div>
+
 # Shift Hazırlayıcı
 
 Haftalık shift programı oluşturucu. Mağaza, ofis veya ekip için **Pazartesi–Pazar** arası otomatik, adil ve özelleştirilebilir shift planı hazırlar.

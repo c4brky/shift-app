@@ -5,7 +5,11 @@
 </p>
 
 ## Ekran Görüntüleri
-⚠️ Windows SmartScreen "Bilinmeyen uygulama" uyarısı verebilir. Bu bir virüs değildir, uygulama imzasız olduğu için çıkar. "Ek bilgi" → "Yine de çalıştır"</b> ile güvenle açabilirsiniz. Kaynak kodu tamamen açıktır, inceleyebilirsiniz.
+> [!WARNING]
+> Windows SmartScreen **"Bilinmeyen uygulama"** uyarısı verebilir. Uygulama dijital olarak imzalanmadığı için bu uyarı normaldir; bir virüs değildir ve kaynak kodu tamamen açıktır.
+
+> [!TIP]
+> **Nasıl Açılır?** Uyarı penceresinde **"Ek bilgi"** yazısına tıklayıp **"Yine de çalıştır"** butonuna basarak programı güvenle başlatabilirsiniz. *(İsterseniz indirilen `.exe` dosyasına Sağ Tık → Özellikler → **Engeli kaldır** diyerek uyarıyı kalıcı olarak kapatabilirsiniz.)*
 
 | Uygulama Arayüzü | Shift Sonucu |
 |---|---|

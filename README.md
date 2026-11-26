@@ -1,17 +1,11 @@
-<table>
-  <tr>
-    <td width="300" align="center">
-      <a href="https://github.com/c4brky/SHIFT-APP/releases/latest/download/shift_hazirlayici.exe">
-        <img src="assets/download.svg" alt="PROGRAMI İNDİR" width="260" />
-      </a>
-    </td>
-    <td>
-      ⚠️ Windows SmartScreen "Bilinmeyen uygulama" uyarısı verebilir. Bu bir virüs değildir, uygulama imzasız olduğu için çıkar. "Ek bilgi" → "Yine de çalıştır"</b> ile güvenle açabilirsiniz. Kaynak kodu tamamen açıktır, inceleyebilirsiniz.
-    </td>
-  </tr>
-</table>
+<p >
+  <a href="https://github.com/c4brky/SHIFT-APP/releases/latest/download/shift_hazirlayici.exe">
+    <img src="assets/download.svg" alt="PROGRAMI İNDİR" />
+  </a>
+</p>
 
 ## Ekran Görüntüleri
+⚠️ Windows SmartScreen "Bilinmeyen uygulama" uyarısı verebilir. Bu bir virüs değildir, uygulama imzasız olduğu için çıkar. "Ek bilgi" → "Yine de çalıştır"</b> ile güvenle açabilirsiniz. Kaynak kodu tamamen açıktır, inceleyebilirsiniz.
 
 | Uygulama Arayüzü | Shift Sonucu |
 |---|---|

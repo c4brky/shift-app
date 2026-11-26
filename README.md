@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/c4brky/SHIFT-APP/releases/latest/download/shift_hazirlayici.exe">
-    <img src="https://img.shields.io/badge/PROGRAMI_INDIR-WINDOWS-16A34A?style=for-the-badge" alt="Programı İndir" />
+    <img src="assets/download.svg" alt="PROGRAMI İNDİR" />
   </a>
 </p>
 

@@ -5,9 +5,9 @@
 </p>
 
 > ⚠️ Windows SmartScreen "Bilinmeyen uygulama" uyarısı verebilir.
-> Bu bir virüs değildir — uygulama imzasız olduğu için çıkar.
+> Bu bir virüs değildir, uygulama imzasız olduğu için çıkar.
 > "Ek bilgi" → "Yine de çalıştır" ile güvenle açabilirsiniz.
-> Kaynak kodu tamamen açıktır, inceleyebilirsiniz.\ntest
+> Kaynak kodu tamamen açıktır, inceleyebilirsiniz.
 
 # Shift Hazırlayıcı
 

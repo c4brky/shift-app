@@ -1,0 +1,23 @@
+# Build outputs
+bin/
+obj/
+*.user
+*.suo
+*.pdb
+
+# IDE
+.vs/
+.vscode/
+*.DotSettings.user
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# NuGet
+*.nupkg
+packages/
+
+# Standalone single-file exe (~154 MB - distribute via GitHub Releases)
+tek exe/

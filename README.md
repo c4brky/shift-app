@@ -33,27 +33,15 @@ Haftalık shift programı oluşturucu. Mağaza, ofis veya ekip için **Pazartesi
 - .NET 8 SDK (`net8.0-windows`)
 - Windows 10 / 11
 
-### Tek Exe (Hazır Çalıştırılabilir)
+### Exe (Hazır Çalıştırılabilir)
 - Hiçbir ek kurulum gerekmez — .NET Runtime gömülüdür
 - İnternet bağlantısı gerekmez
-- `tek exe/` klasöründeki `SHIFT HAZIRLAYICI.exe` dosyasını çift tıklayarak çalıştırabilirsiniz *(Not: Boyutu ~154 MB olduğu için GitHub'da Releases bölümüne yüklenmesi önerilir)*
-
-## Derleme & Test
-
-```bash
-dotnet build ShiftHazirlayici.sln -c Release
-dotnet test ShiftHazirlayici.sln -c Release
-```
-
-### Self-Contained Tek Exe Oluşturma
-
-```bash
-dotnet publish src/ShiftHazirlayici/ShiftHazirlayici.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "tek exe"
-```
+- `release/` klasöründeki `shift_hazirlayici.exe` dosyasını çift tıklayarak çalıştırabilirsiniz
 
 ## Proje Yapısı
 
 ```
+├── assets/                       # Gereklilikler (SVG)
 ├── src/ShiftHazirlayici/         # Ana uygulama (WPF)
 │   ├── Models/                   # Veri modelleri
 │   ├── Services/                 # Shift üretici, kayıt, görsel dışa aktarma
@@ -61,8 +49,6 @@ dotnet publish src/ShiftHazirlayici/ShiftHazirlayici.csproj -c Release -r win-x6
 │   ├── Helpers/                  # Windows tema yardımcıları
 │   ├── Themes/                   # XAML tema ve stil dosyaları
 │   └── Assets/                   # Logo ve ikon
-├── tests/ShiftHazirlayici.Tests/ # Unit testler
-├── tek exe/                      # Hazır çalıştırılabilir (self-contained)
 └── ShiftHazirlayici.sln          # Solution dosyası
 ```
 

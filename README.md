@@ -4,6 +4,11 @@
   </a>
 </p>
 
+> ⚠️ Windows SmartScreen "Bilinmeyen uygulama" uyarısı verebilir.
+> Bu bir virüs değildir — uygulama imzasız olduğu için çıkar.
+> "Ek bilgi" → "Yine de çalıştır" ile güvenle açabilirsiniz.
+> Kaynak kodu tamamen açıktır, inceleyebilirsiniz.
+
 # Shift Hazırlayıcı
 
 Haftalık shift programı oluşturucu. Mağaza, ofis veya ekip için **Pazartesi–Pazar** arası otomatik, adil ve özelleştirilebilir shift planı hazırlar.

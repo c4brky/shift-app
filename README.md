@@ -2,12 +2,10 @@
   <a href="https://github.com/c4brky/SHIFT-APP/releases/latest/download/shift_hazirlayici.exe">
     <img src="assets/download.svg" alt="PROGRAMI İNDİR" />
   </a>
+  <p>
+    > ⚠️ Windows SmartScreen "Bilinmeyen uygulama" uyarısı verebilir. Bu bir virüs değildir, uygulama imzasız olduğu için çıkar. "Ek bilgi" → "Yine de çalıştır" ile güvenle açabilirsiniz. Kaynak kodu tamamen açıktır, inceleyebilirsiniz.
+  </p>
 </p>
-
-> ⚠️ Windows SmartScreen "Bilinmeyen uygulama" uyarısı verebilir.
-> Bu bir virüs değildir, uygulama imzasız olduğu için çıkar.
-> "Ek bilgi" → "Yine de çalıştır" ile güvenle açabilirsiniz.
-> Kaynak kodu tamamen açıktır, inceleyebilirsiniz.
 
 ## Ekran Görüntüleri
 

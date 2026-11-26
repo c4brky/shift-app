@@ -9,6 +9,12 @@
 > "Ek bilgi" → "Yine de çalıştır" ile güvenle açabilirsiniz.
 > Kaynak kodu tamamen açıktır, inceleyebilirsiniz.
 
+## Ekran Görüntüleri
+
+| Uygulama Arayüzü | Shift Sonucu |
+|---|---|
+| ![Uygulama](assets/in-app-view.png) | ![Shift Sonucu](assets/output-result.png) |
+
 # Shift Hazırlayıcı
 
 Haftalık shift programı oluşturucu. Mağaza, ofis veya ekip için **Pazartesi–Pazar** arası otomatik, adil ve özelleştirilebilir shift planı hazırlar.

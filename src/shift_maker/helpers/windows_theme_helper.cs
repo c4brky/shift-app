@@ -1,11 +1,10 @@
-// Hey! Sonunda beni bulabildin, seni tebrik ediyorum. <3
 // made by c4brky
 using System;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 
-namespace ShiftHazirlayici.Helpers;
+namespace ShiftMaker.Helpers;
 
 public static class WindowsThemeHelper
 {

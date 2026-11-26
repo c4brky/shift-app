@@ -1,4 +1,3 @@
-// Hey! Sonunda beni bulabildin, seni tebrik ediyorum. <3
 // made by c4brky
 using System;
 using System.Collections.Generic;
@@ -12,12 +11,12 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Microsoft.Win32;
-using ShiftHazirlayici.Helpers;
-using ShiftHazirlayici.Models;
-using ShiftHazirlayici.Services;
-using ShiftHazirlayici.Views;
+using ShiftMaker.Helpers;
+using ShiftMaker.Models;
+using ShiftMaker.Services;
+using ShiftMaker.Views;
 
-namespace ShiftHazirlayici;
+namespace ShiftMaker;
 
 public partial class MainWindow : Window
 {
@@ -30,6 +29,8 @@ public partial class MainWindow : Window
     private List<WeeklySchedule> _history = new();
     private bool _isLoadingUi = true;
     private bool _isGiftOpen = false;
+
+    private AppLanguage Lang => _state.Settings.Language;
 
     private class FullDayOption
     {
@@ -67,11 +68,11 @@ public partial class MainWindow : Window
         SyncUiFromState();
         _isLoadingUi = false;
 
+        ApplyLanguage();
         RefreshDynamicStatusAndRules();
         RenderShiftTable();
         RenderHistoryList();
 
-        // İlk kez çalıştırıldığında kullanıcıdan kayıt konumunu göstermesini iste
         if (!_state.HasUserChosenSaveFolder)
         {
             Dispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(PromptFirstRunSaveFolder));
@@ -81,8 +82,10 @@ public partial class MainWindow : Window
     private void PromptFirstRunSaveFolder()
     {
         MessageBox.Show(
-            "Hoş geldiniz!\n\nOluşturulacak shift görsellerinin (PNG / JPG) kaydedileceği klasörü şimdi seçin.",
-            "SHIFT HAZIRLAYICI — Kayıt Konumu",
+            LocalizationService.T(Lang,
+                "Hoş geldiniz!\n\nOluşturulacak shift görsellerinin (PNG / JPG) kaydedileceği klasörü şimdi seçin.",
+                "Welcome!\n\nPlease choose the folder where exported shift images (PNG / JPG) will be saved."),
+            "SHIFT MAKER",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
 
@@ -99,21 +102,117 @@ public partial class MainWindow : Window
         PerformAutoSave();
     }
 
-    private void UpdateLegendPillColors()
+    private void ApplyLanguage()
     {
-        ApplyLegendStyle(PillLegendSabah, LegendSabah, ShiftType.Sabah);
-        ApplyLegendStyle(PillLegendAra, LegendAra, ShiftType.Ara);
-        ApplyLegendStyle(PillLegendAksam, LegendAksam, ShiftType.Aksam);
-        ApplyLegendStyle(PillLegendFull, LegendFull, ShiftType.Full);
-        ApplyLegendStyle(PillLegendIzin, LegendIzin, ShiftType.Izin);
+        bool prevLoading = _isLoadingUi;
+        _isLoadingUi = true;
+
+        BtnLanguage.Content = Lang == AppLanguage.En ? "EN" : "TR";
+        BtnLanguage.ToolTip = "Language: TR / EN";
+
+        TxtSaveLabel.Text = LocalizationService.T(Lang, "📁 Kayıt:", "📁 Save:");
+        BtnSelectFolder.Content = LocalizationService.T(Lang, "Seç", "Select");
+        BtnOpenFolder.Content = LocalizationService.T(Lang, "Aç", "Open");
+        BtnOpenFolder.ToolTip = LocalizationService.T(Lang, "Kayıt klasörünü aç", "Open save folder");
+
+        TabPlanner.Content = LocalizationService.T(Lang, "📋 Planlayıcı", "📋 Planner");
+        UpdateHistoryTabTitle();
+
+        BtnPrevWeek.ToolTip = LocalizationService.T(Lang, "Önceki Hafta", "Previous Week");
+        BtnNextWeek.ToolTip = LocalizationService.T(Lang, "Sonraki Hafta", "Next Week");
+        DpStartDate.ToolTip = LocalizationService.T(Lang, "Başlangıç Tarihi", "Start Date");
+        DpEndDate.ToolTip = LocalizationService.T(Lang, "Bitiş Tarihi", "End Date");
+
+        BtnCustomize.Content = LocalizationService.T(Lang, "⚙ ÖZELLEŞTİR", "⚙ CUSTOMIZE");
+        BtnGenerate.Content = LocalizationService.T(Lang, "✨ OLUŞTUR", "✨ GENERATE");
+
+        SubTabTeam.Content = LocalizationService.T(Lang, "👥 Ekip & İzinler", "👥 Team & Leave");
+        SubTabHoursFull.Content = LocalizationService.T(Lang, "⏰ Saatler & Full", "⏰ Hours & Full");
+
+        TxtStaffListTitle.Text = LocalizationService.T(Lang, "Personel Listesi (3–30)", "Staff List (3–30)");
+        BtnAddPerson.Content = LocalizationService.T(Lang, "+ Kişi Ekle", "+ Add Staff");
+
+        TxtBulkLeaveHeader.Text = LocalizationService.T(Lang, "Toplu İzin & Kapsam", "Bulk Leave & Scope");
+        string lastDayName = WeekDateHelper.GetDayName(_state.TargetStartDate, 6, Lang);
+        ChkBulkLastDay.Content = LocalizationService.T(Lang, $"Toplu {lastDayName} İzni", $"Bulk {lastDayName} Leave");
+        ChkNoLeaveAll.Content = LocalizationService.T(Lang, "İzinleri Kapat", "Disable All Leave");
+        BtnAllRandomLeave.Content = LocalizationService.T(Lang, "Herkes Rastgele", "All Random");
+
+        RefreshLeaveScopeComboItems();
+
+        TxtWorkHoursHeader.Text = LocalizationService.T(Lang, "Mesai Saatleri (07–22)", "Work Hours (07–22)");
+        LblMainMorning.Text = LocalizationService.GetShiftLabel(ShiftType.Morning, Lang, false);
+        LblMainMid.Text = LocalizationService.GetShiftLabel(ShiftType.Mid, Lang, false);
+        LblMainEvening.Text = LocalizationService.GetShiftLabel(ShiftType.Evening, Lang, false);
+        LblMainFull.Text = LocalizationService.T(Lang, "Full Kalma", "Full Shift");
+
+        TxtEnableFullMain.Text = LocalizationService.T(Lang, "Full Kalma Ekle", "Add Full Shift");
+        BtnClearMainFull.Content = LocalizationService.T(Lang, "Full Seçimlerini Temizle", "Clear Full Selections");
+
+        BtnOpenExportedImage.Content = LocalizationService.T(Lang, "🖼 Görseli Aç", "🖼 Open Image");
+        BtnReExportImage.Content = LocalizationService.T(Lang, "💾 Yeniden Dışa Aktar", "💾 Re-Export");
+
+        TxtHistoryTitle.Text = LocalizationService.T(Lang, "🗂 Geçmiş Shift Kayıtları", "🗂 Shift History");
+        BtnClearAllHistory.Content = LocalizationService.T(Lang, "🗑 Tüm Geçmişi Temizle", "🗑 Clear All History");
+
+        TxtRulesFooterTitle.Text = LocalizationService.T(Lang, "📌 Aktif Kurallar", "📌 Active Rules");
+        TxtGiftMessage.Text = "c4brky <3";
+
+        UpdateLegendPillColors();
+        UpdateLegendTexts();
+        RebuildPersonRows();
+        RebuildMainFullDaySelectors();
+
+        _isLoadingUi = prevLoading;
     }
 
-    private static void ApplyLegendStyle(Border pill, TextBlock tb, ShiftType st)
+    private void RefreshLeaveScopeComboItems()
     {
-        var (_, _, bg, border, fg) = ImageExportService.GetShiftColors(st, null, true);
+        int prevIdx = CmbQuickLeaveScope.SelectedIndex;
+        CmbQuickLeaveScope.Items.Clear();
+
+        DateTime start = _state.TargetStartDate.Date;
+        string d0 = WeekDateHelper.GetDayName(start, 0, Lang);
+        string d4 = WeekDateHelper.GetDayName(start, 4, Lang);
+        string d5 = WeekDateHelper.GetDayName(start, 5, Lang);
+        string d6 = WeekDateHelper.GetDayName(start, 6, Lang);
+
+        CmbQuickLeaveScope.Items.Add(LocalizationService.T(Lang, $"İlk 5 Gün ({d0}-{d4})", $"First 5 Days ({d0}-{d4})"));
+        CmbQuickLeaveScope.Items.Add(LocalizationService.T(Lang, $"İlk 6 Gün ({d0}-{d5})", $"First 6 Days ({d0}-{d5})"));
+        CmbQuickLeaveScope.Items.Add(LocalizationService.T(Lang, $"Tüm Hafta ({d0}-{d6})", $"Full Week ({d0}-{d6})"));
+
+        CmbQuickLeaveScope.SelectedIndex = Math.Clamp(prevIdx >= 0 ? prevIdx : (int)_state.Settings.RandomLeaveScope, 0, 2);
+    }
+
+    private void UpdateLegendPillColors()
+    {
+        ApplyLegendStyle(PillLegendMorning, LegendMorning, ShiftType.Morning);
+        ApplyLegendStyle(PillLegendMid, LegendMid, ShiftType.Mid);
+        ApplyLegendStyle(PillLegendEvening, LegendEvening, ShiftType.Evening);
+        ApplyLegendStyle(PillLegendFull, LegendFull, ShiftType.Full);
+        ApplyLegendStyle(PillLegendOff, LegendOff, ShiftType.Off);
+
+        LblMainMorning.Foreground = new SolidColorBrush(ShiftColorPalette.GetPreset(_state.Settings.MorningColorKey, ShiftType.Morning).Fg);
+        LblMainMid.Foreground = new SolidColorBrush(ShiftColorPalette.GetPreset(_state.Settings.MidColorKey, ShiftType.Mid).Fg);
+        LblMainEvening.Foreground = new SolidColorBrush(ShiftColorPalette.GetPreset(_state.Settings.EveningColorKey, ShiftType.Evening).Fg);
+        LblMainFull.Foreground = new SolidColorBrush(ShiftColorPalette.GetPreset(_state.Settings.FullColorKey, ShiftType.Full).Fg);
+    }
+
+    private void ApplyLegendStyle(Border pill, TextBlock tb, ShiftType st)
+    {
+        var (_, _, bg, border, fg) = ImageExportService.GetShiftColors(st, null, true, _state.Settings);
         pill.Background = new SolidColorBrush(bg);
         pill.BorderBrush = new SolidColorBrush(border);
         tb.Foreground = new SolidColorBrush(fg);
+    }
+
+    private void UpdateLegendTexts()
+    {
+        LegendMorning.Text = $"● {LocalizationService.GetShiftLabel(ShiftType.Morning, Lang, false)}: {_state.Settings.MorningTime.Formatted}";
+        LegendMid.Text = $"● {LocalizationService.GetShiftLabel(ShiftType.Mid, Lang, false)}: {_state.Settings.MidTime.Formatted}";
+        LegendEvening.Text = $"● {LocalizationService.GetShiftLabel(ShiftType.Evening, Lang, false)}: {_state.Settings.EveningTime.Formatted}";
+        LegendFull.Text = $"● {LocalizationService.GetShiftLabel(ShiftType.Full, Lang, true)}: {_state.Settings.FullTime.Formatted}";
+        LegendOff.Text = $"● {LocalizationService.GetShiftLabel(ShiftType.Off, Lang, true)}: {LocalizationService.GetLeaveSubLabel(Lang)}";
     }
 
     private void ScheduleAutoSave()
@@ -128,11 +227,11 @@ public partial class MainWindow : Window
         try
         {
             _persistence.SaveAutoState(_state);
-            TxtStatusAutoSave.Text = $"💾 Kaydedildi: {DateTime.Now:HH:mm:ss}";
+            TxtStatusAutoSave.Text = $"💾 {LocalizationService.T(Lang, "Kaydedildi", "Saved")}: {DateTime.Now:HH:mm:ss}";
         }
         catch
         {
-            TxtStatusAutoSave.Text = "💾 Otomatik Kayıt: Beklemede";
+            TxtStatusAutoSave.Text = $"💾 {LocalizationService.T(Lang, "Otomatik Kayıt: Beklemede", "Auto-save: Pending")}";
         }
     }
 
@@ -141,10 +240,10 @@ public partial class MainWindow : Window
         var hours = WeekDateHelper.ValidHours.Select(h => $"{h:00}").ToList();
         var mins = WeekDateHelper.ValidMinutes.Select(m => $"{m:00}").ToList();
 
-        foreach (var cmb in new[] { MainSabahSH, MainSabahEH, MainAraSH, MainAraEH, MainAksamSH, MainAksamEH, MainFullSH, MainFullEH })
+        foreach (var cmb in new[] { MainMorningSH, MainMorningEH, MainMidSH, MainMidEH, MainEveningSH, MainEveningEH, MainFullSH, MainFullEH })
             cmb.ItemsSource = hours;
 
-        foreach (var cmb in new[] { MainSabahSM, MainSabahEM, MainAraSM, MainAraEM, MainAksamSM, MainAksamEM, MainFullSM, MainFullEM })
+        foreach (var cmb in new[] { MainMorningSM, MainMorningEM, MainMidSM, MainMidEM, MainEveningSM, MainEveningEM, MainFullSM, MainFullEM })
             cmb.ItemsSource = mins;
     }
 
@@ -155,13 +254,17 @@ public partial class MainWindow : Window
         TxtSaveFolder.Text = _state.SaveFolderPath;
         TxtSaveFolder.ToolTip = _state.SaveFolderPath;
 
-        _state.TargetMondayDate = WeekDateHelper.GetMonday(_state.TargetMondayDate);
-        DpTargetWeek.SelectedDate = _state.TargetMondayDate;
-        TxtActiveWeekLabel.Text = WeekDateHelper.GetWeekDisplayLabel(_state.TargetMondayDate);
+        if (_state.TargetStartDate == default)
+            _state.TargetStartDate = WeekDateHelper.GetMonday(DateTime.Today);
+        else
+            _state.TargetStartDate = _state.TargetStartDate.Date;
 
-        ChkBulkSunday.IsChecked = _state.Settings.BulkSundayLeave;
+        DpStartDate.SelectedDate = _state.TargetStartDate;
+        DpEndDate.SelectedDate = WeekDateHelper.GetWeekEnd(_state.TargetStartDate);
+
+        ChkBulkLastDay.IsChecked = _state.Settings.BulkLastDayLeave;
         ChkNoLeaveAll.IsChecked = _state.Settings.NoLeaveForAll;
-        CmbQuickLeaveScope.SelectedIndex = (int)_state.Settings.RandomLeaveScope;
+        RefreshLeaveScopeComboItems();
 
         ChkEnableFullMain.IsChecked = _state.Settings.EnableFullShifts;
         MainFullDaysContainer.Visibility = _state.Settings.EnableFullShifts ? Visibility.Visible : Visibility.Collapsed;
@@ -176,15 +279,11 @@ public partial class MainWindow : Window
 
     private void SyncHourCombosFromSettings()
     {
-        SetTimeCombo(_state.Settings.SabahTime, MainSabahSH, MainSabahSM, MainSabahEH, MainSabahEM);
-        SetTimeCombo(_state.Settings.AraTime, MainAraSH, MainAraSM, MainAraEH, MainAraEM);
-        SetTimeCombo(_state.Settings.AksamTime, MainAksamSH, MainAksamSM, MainAksamEH, MainAksamEM);
+        SetTimeCombo(_state.Settings.MorningTime, MainMorningSH, MainMorningSM, MainMorningEH, MainMorningEM);
+        SetTimeCombo(_state.Settings.MidTime, MainMidSH, MainMidSM, MainMidEH, MainMidEM);
+        SetTimeCombo(_state.Settings.EveningTime, MainEveningSH, MainEveningSM, MainEveningEH, MainEveningEM);
         SetTimeCombo(_state.Settings.FullTime, MainFullSH, MainFullSM, MainFullEH, MainFullEM);
-
-        LegendSabah.Text = $"● Sabahçı: {_state.Settings.SabahTime.Formatted}";
-        LegendAra.Text = $"● Ara Shift: {_state.Settings.AraTime.Formatted}";
-        LegendAksam.Text = $"● Akşamcı: {_state.Settings.AksamTime.Formatted}";
-        LegendFull.Text = $"● FULL: {_state.Settings.FullTime.Formatted}";
+        UpdateLegendTexts();
     }
 
     private static void SetTimeCombo(ShiftTimeRange tr, ComboBox sh, ComboBox sm, ComboBox eh, ComboBox em)
@@ -206,7 +305,8 @@ public partial class MainWindow : Window
     private void RebuildPersonRows()
     {
         PersonRowsPanel.Children.Clear();
-        bool disableIndividualLeaves = _state.Settings.BulkSundayLeave || _state.Settings.NoLeaveForAll;
+        bool disableIndividualLeaves = _state.Settings.BulkLastDayLeave || _state.Settings.NoLeaveForAll;
+        DateTime weekStart = _state.TargetStartDate.Date;
 
         for (int i = 0; i < _state.People.Count; i++)
         {
@@ -225,11 +325,11 @@ public partial class MainWindow : Window
 
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(24) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 85 });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 80 });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(4) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(86) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(4) });
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(86) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(90) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) });
 
             var numBadge = new Border
@@ -257,7 +357,7 @@ public partial class MainWindow : Window
             {
                 Text = person.Name,
                 Height = 29,
-                ToolTip = "Personel adını girin"
+                ToolTip = LocalizationService.T(Lang, "Personel adını girin", "Enter staff name")
             };
             txtName.TextChanged += (_, _) =>
             {
@@ -273,28 +373,28 @@ public partial class MainWindow : Window
             {
                 Height = 29,
                 IsEnabled = !disableIndividualLeaves,
-                ToolTip = "İzin tercihi"
+                ToolTip = LocalizationService.T(Lang, "İzin tercihi", "Leave mode")
             };
-            cmbMode.Items.Add("Rastgele");
-            cmbMode.Items.Add("Belirli Gün");
-            cmbMode.Items.Add("İzin Yok");
+            cmbMode.Items.Add(LocalizationService.T(Lang, "Rastgele", "Random"));
+            cmbMode.Items.Add(LocalizationService.T(Lang, "Belirli Gün", "Fixed Day"));
+            cmbMode.Items.Add(LocalizationService.T(Lang, "İzin Yok", "No Leave"));
             cmbMode.SelectedIndex = (int)person.LeaveMode;
 
             var cmbDay = new ComboBox
             {
                 Height = 29,
-                IsEnabled = !disableIndividualLeaves && person.LeaveMode == LeaveMode.BelirliGun,
-                ToolTip = "Sabit izin günü"
+                IsEnabled = !disableIndividualLeaves && person.LeaveMode == LeaveMode.FixedDay,
+                ToolTip = LocalizationService.T(Lang, "Sabit izin günü", "Fixed leave day")
             };
-            foreach (string dayName in PersonConfig.DayNamesTr)
-                cmbDay.Items.Add(dayName);
+            for (int d = 0; d < 7; d++)
+                cmbDay.Items.Add(WeekDateHelper.GetDayName(weekStart, d, Lang));
             cmbDay.SelectedIndex = Math.Clamp(person.SelectedDayIndex, 0, 6);
 
             cmbMode.SelectionChanged += (_, _) =>
             {
                 if (_isLoadingUi) return;
                 person.LeaveMode = (LeaveMode)Math.Clamp(cmbMode.SelectedIndex, 0, 2);
-                cmbDay.IsEnabled = !disableIndividualLeaves && person.LeaveMode == LeaveMode.BelirliGun;
+                cmbDay.IsEnabled = !disableIndividualLeaves && person.LeaveMode == LeaveMode.FixedDay;
                 OnInputsChanged(invalidateSchedule: true);
             };
 
@@ -323,7 +423,9 @@ public partial class MainWindow : Window
                 Margin = new Thickness(4, 0, 0, 0),
                 Style = (Style)FindResource("SecondaryButton"),
                 IsEnabled = _state.People.Count > 3,
-                ToolTip = _state.People.Count > 3 ? "Kişiyi listeden çıkar" : "En az 3 kişi gereklidir"
+                ToolTip = _state.People.Count > 3
+                    ? LocalizationService.T(Lang, "Kişiyi listeden çıkar", "Remove staff")
+                    : LocalizationService.T(Lang, "En az 3 kişi gereklidir", "Minimum 3 staff required")
             };
             btnRemove.Click += (_, _) =>
             {
@@ -346,7 +448,7 @@ public partial class MainWindow : Window
             PersonRowsPanel.Children.Add(rowBorder);
         }
 
-        BtnAddPerson.IsEnabled = _state.People.Count < 10;
+        BtnAddPerson.IsEnabled = _state.People.Count < 30;
         CheckManualLeaveOverlapWarning();
     }
 
@@ -354,14 +456,17 @@ public partial class MainWindow : Window
     {
         MainFullDaysPanel.Children.Clear();
         _state.Settings.FullPersonIdByDay = CustomizationSettings.NormalizeFullList(_state.Settings.FullPersonIdByDay);
+        DateTime weekStart = _state.TargetStartDate.Date;
 
         var options = new List<FullDayOption>
         {
-            new() { PersonId = null, DisplayName = "— Full Yok —" }
+            new() { PersonId = null, DisplayName = LocalizationService.T(Lang, "— Full Yok —", "— None —") }
         };
         foreach (var p in _state.People)
         {
-            string label = string.IsNullOrWhiteSpace(p.Name) ? "(İsimsiz)" : p.Name.Trim();
+            string label = string.IsNullOrWhiteSpace(p.Name)
+                ? LocalizationService.T(Lang, "(İsimsiz)", "(Unnamed)")
+                : p.Name.Trim();
             options.Add(new FullDayOption { PersonId = p.Id, DisplayName = label });
         }
 
@@ -372,12 +477,12 @@ public partial class MainWindow : Window
         {
             int dayIndex = d;
             var rowGrid = new Grid { Margin = new Thickness(0, 0, 0, 6) };
-            rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(86) });
+            rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(92) });
             rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
             var tb = new TextBlock
             {
-                Text = PersonConfig.DayNamesTr[dayIndex],
+                Text = WeekDateHelper.GetDayName(weekStart, dayIndex, Lang),
                 FontSize = 12,
                 FontWeight = FontWeights.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center
@@ -416,22 +521,26 @@ public partial class MainWindow : Window
 
     private void CheckManualLeaveOverlapWarning()
     {
-        if (_state.Settings.BulkSundayLeave || _state.Settings.NoLeaveForAll || _state.Settings.AllowLeaveOverlap)
+        if (_state.Settings.BulkLastDayLeave || _state.Settings.NoLeaveForAll || _state.Settings.AllowLeaveOverlap)
         {
             BannerOverlapWarning.Visibility = Visibility.Collapsed;
             return;
         }
 
+        DateTime weekStart = _state.TargetStartDate.Date;
         var conflicts = _state.People
-            .Where(p => p.LeaveMode == LeaveMode.BelirliGun)
+            .Where(p => p.LeaveMode == LeaveMode.FixedDay)
             .GroupBy(p => p.SelectedDayIndex)
             .Where(g => g.Count() > 1)
-            .Select(g => PersonConfig.DayNamesTr[g.Key])
+            .Select(g => WeekDateHelper.GetDayName(weekStart, g.Key, Lang))
             .ToList();
 
         if (conflicts.Count > 0)
         {
-            TxtOverlapWarning.Text = $"⚠ İzin çakışması: {string.Join(", ", conflicts)} günü birden fazla kişiye seçildi. Toplu günler dışında izinler çakışamaz.";
+            TxtOverlapWarning.Text = LocalizationService.T(
+                Lang,
+                $"⚠ İzin çakışması: {string.Join(", ", conflicts)} günü birden fazla kişiye seçildi.",
+                $"⚠ Leave overlap: {string.Join(", ", conflicts)} selected for multiple staff.");
             BannerOverlapWarning.Visibility = Visibility.Visible;
         }
         else
@@ -454,38 +563,39 @@ public partial class MainWindow : Window
     private void RefreshDynamicStatusAndRules()
     {
         int count = _state.People.Count;
-        TxtStatusPeople.Text = $"👥 {count} / 10 Kişi";
+        TxtStatusPeople.Text = LocalizationService.T(Lang, $"👥 {count} / 30 Kişi", $"👥 {count} / 30 Staff");
 
         if (_state.Settings.NoLeaveForAll)
-            TxtStatusLeave.Text = "🚫 İzin: Kapalı";
-        else if (_state.Settings.BulkSundayLeave)
-            TxtStatusLeave.Text = "📅 İzin: Toplu Pazar";
+            TxtStatusLeave.Text = LocalizationService.T(Lang, "🚫 İzin: Kapalı", "🚫 Leave: Off");
+        else if (_state.Settings.BulkLastDayLeave)
+        {
+            string d6 = WeekDateHelper.GetDayName(_state.TargetStartDate, 6, Lang);
+            TxtStatusLeave.Text = LocalizationService.T(Lang, $"📅 İzin: Toplu {d6}", $"📅 Leave: Bulk {d6}");
+        }
         else
         {
-            int manual = _state.People.Count(p => p.LeaveMode == LeaveMode.BelirliGun);
-            int rnd = _state.People.Count(p => p.LeaveMode == LeaveMode.Rastgele);
-            TxtStatusLeave.Text = $"🌴 İzin: {manual} Sabit, {rnd} Rastgele";
+            int manual = _state.People.Count(p => p.LeaveMode == LeaveMode.FixedDay);
+            int rnd = _state.People.Count(p => p.LeaveMode == LeaveMode.Random);
+            TxtStatusLeave.Text = LocalizationService.T(Lang, $"🌴 İzin: {manual} Sabit, {rnd} Rastgele", $"🌴 Leave: {manual} Fixed, {rnd} Random");
         }
 
-        var priorCount = GetApplicablePriorWeeksCount(_state.TargetMondayDate);
+        var priorCount = GetApplicablePriorWeeksCount(_state.TargetStartDate);
         TxtStatusHistory.Text = _state.Settings.EnableHistoryComparison
-            ? $"🕒 Son 2 Hafta: {priorCount} kayıt"
-            : "🕒 Önceki Hafta: Kapalı";
+            ? LocalizationService.T(Lang, $"🕒 Son 2 Hafta: {priorCount} kayıt", $"🕒 Last 2 Weeks: {priorCount}")
+            : LocalizationService.T(Lang, "🕒 Önceki Hafta: Kapalı", "🕒 History Check: Off");
 
-        TxtStatusExport.Text = _state.Settings.ExportFormat == ImageExportFormat.Jpg
-            ? "🖼 Görsel: JPG"
-            : "🖼 Görsel: PNG";
+        TxtStatusExport.Text = _state.Settings.ExportFormat == ImageExportFormat.Jpg ? "🖼 JPG" : "🖼 PNG";
 
         bool showFullLegend = _state.Settings.EnableFullShifts || (_state.CurrentSchedule?.HasFullShifts ?? false);
         PillLegendFull.Visibility = showFullLegend ? Visibility.Visible : Visibility.Collapsed;
 
-        var rules = ShiftGeneratorService.BuildActiveRulesList(_state.People, _state.Settings, priorCount);
+        var rules = ShiftGeneratorService.BuildActiveRulesList(_state.People, _state.Settings, priorCount, _state.TargetStartDate);
         RulesListControl.ItemsSource = rules;
     }
 
-    private int GetApplicablePriorWeeksCount(DateTime targetMonday)
+    private int GetApplicablePriorWeeksCount(DateTime targetStartDate)
     {
-        var prior = _history.Where(s => s.WeekStartMonday.Date < targetMonday.Date).Take(2).Count();
+        var prior = _history.Where(s => s.WeekStartDate.Date < targetStartDate.Date).Take(2).Count();
         if (prior == 0 && _history.Count > 0)
             prior = Math.Min(2, _history.Count);
         return prior;
@@ -499,17 +609,18 @@ public partial class MainWindow : Window
 
         var schedule = _state.CurrentSchedule;
         bool isGenerated = schedule != null;
-        DateTime monday = isGenerated ? schedule!.WeekStartMonday : _state.TargetMondayDate;
-        string weekLabel = isGenerated ? schedule!.WeekDisplayLabel : WeekDateHelper.GetWeekDisplayLabel(monday);
+        DateTime weekStart = isGenerated ? schedule!.WeekStartDate : _state.TargetStartDate;
+        string weekLabel = isGenerated ? schedule!.WeekDisplayLabel : WeekDateHelper.GetWeekDisplayLabel(weekStart);
 
-        TxtTableTitle.Text = $"Haftalık Shift Programı • {weekLabel}";
+        TxtTableTitle.Text = weekLabel;
 
         if (isGenerated)
         {
-            TxtScheduleState.Text = "✓ Hazır & Kayıtlı";
+            TxtScheduleState.Text = LocalizationService.T(Lang, "✓ Hazır", "✓ Ready");
             TxtScheduleState.SetResourceReference(TextBlock.ForegroundProperty, "SuccessTextBrush");
             BadgeScheduleState.SetResourceReference(Border.BackgroundProperty, "SuccessBgBrush");
-            TxtTableSubtitle.Text = $"Oluşturulma: {schedule!.CreatedAt:dd.MM.yyyy HH:mm}  •  Dosya: {schedule.FileBaseName}";
+            TxtTableSubtitle.Text = $"{schedule!.CreatedAt:dd.MM.yyyy HH:mm}  •  {schedule.FileBaseName}";
+            TxtTableSubtitle.Visibility = Visibility.Visible;
 
             BtnOpenExportedImage.Visibility = !string.IsNullOrEmpty(schedule.ImageFilePath) && File.Exists(schedule.ImageFilePath)
                 ? Visibility.Visible
@@ -528,10 +639,10 @@ public partial class MainWindow : Window
         }
         else
         {
-            TxtScheduleState.Text = "Canlı Taslak";
+            TxtScheduleState.Text = LocalizationService.T(Lang, "Taslak", "Draft");
             TxtScheduleState.SetResourceReference(TextBlock.ForegroundProperty, "TextSecondaryBrush");
             BadgeScheduleState.SetResourceReference(Border.BackgroundProperty, "SubtleFillBrush");
-            TxtTableSubtitle.Text = $"{_state.People.Count} kişi için dinamik önizleme — oluşturmak için OLUŞTUR'a tıklayın.";
+            TxtTableSubtitle.Visibility = Visibility.Collapsed;
             BtnOpenExportedImage.Visibility = Visibility.Collapsed;
             BtnReExportImage.Visibility = Visibility.Collapsed;
             BannerScheduleNotes.Visibility = Visibility.Collapsed;
@@ -559,20 +670,19 @@ public partial class MainWindow : Window
         for (int r = 0; r < rowCount; r++)
             ShiftTableGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        // Anthracite dark gray table colors
         Color headerBg = Color.FromRgb(36, 39, 44);
         Color rowEven = Color.FromRgb(28, 30, 34);
         Color rowOdd = Color.FromRgb(33, 36, 41);
         Color lineColor = Color.FromRgb(47, 51, 59);
 
-        AddHeaderCell(0, "PERSONEL", false, headerBg, lineColor);
+        AddHeaderCell(0, LocalizationService.T(Lang, "PERSONEL", "STAFF"), false, headerBg, lineColor);
         for (int d = 0; d < 7; d++)
-            AddHeaderCell(d + 1, WeekDateHelper.GetDayHeaderLabel(monday, d), true, headerBg, lineColor);
+            AddHeaderCell(d + 1, WeekDateHelper.GetDayHeaderLabel(weekStart, d, Lang), true, headerBg, lineColor);
 
         if (showSummary)
         {
-            AddHeaderCell(8, "Sabah+Ara", true, headerBg, lineColor);
-            AddHeaderCell(9, "Akşam", true, headerBg, lineColor);
+            AddHeaderCell(8, LocalizationService.T(Lang, "Sabah+Ara", "Morning+Mid"), true, headerBg, lineColor);
+            AddHeaderCell(9, LocalizationService.GetShiftLabel(ShiftType.Evening, Lang, false), true, headerBg, lineColor);
             if (showFullCol)
                 AddHeaderCell(10, "Full", true, headerBg, lineColor);
         }
@@ -587,12 +697,14 @@ public partial class MainWindow : Window
                 AddPersonNameCell(r + 1, personRow.PersonName, rowBg, lineColor);
 
                 for (int d = 0; d < 7; d++)
-                    AddShiftPillCell(r + 1, d + 1, personRow.Days[d], schedule, rowBg, lineColor);
+                    AddShiftPillCell(r, d, personRow.Days[d], schedule, rowBg, lineColor);
 
                 if (showSummary)
                 {
-                    AddSummaryCell(r + 1, 8, $"{personRow.EarlyTotal} ({personRow.SabahCount}S+{personRow.AraCount}A)", rowBg, lineColor, true);
-                    AddSummaryCell(r + 1, 9, $"{personRow.AksamCount}", rowBg, lineColor, false);
+                    string mAbbr = Lang == AppLanguage.En ? "M" : "S";
+                    string midAbbr = Lang == AppLanguage.En ? "Mid" : "A";
+                    AddSummaryCell(r + 1, 8, $"{personRow.EarlyTotal} ({personRow.MorningCount}{mAbbr}+{personRow.MidCount}{midAbbr})", rowBg, lineColor, true);
+                    AddSummaryCell(r + 1, 9, $"{personRow.EveningCount}", rowBg, lineColor, false);
                     if (showFullCol)
                         AddSummaryCell(r + 1, 10, $"{personRow.FullCount}", rowBg, lineColor, personRow.FullCount > 0);
                 }
@@ -604,7 +716,9 @@ public partial class MainWindow : Window
             {
                 var p = _state.People[r];
                 var rowBg = r % 2 == 0 ? rowEven : rowOdd;
-                string displayName = string.IsNullOrWhiteSpace(p.Name) ? $"Kişi {r + 1}" : p.Name.Trim();
+                string displayName = string.IsNullOrWhiteSpace(p.Name)
+                    ? LocalizationService.T(Lang, $"Kişi {r + 1}", $"Staff {r + 1}")
+                    : p.Name.Trim();
 
                 AddPersonNameCell(r + 1, displayName, rowBg, lineColor);
 
@@ -671,8 +785,15 @@ public partial class MainWindow : Window
         ShiftTableGrid.Children.Add(border);
     }
 
-    private void AddShiftPillCell(int row, int col, ShiftType st, WeeklySchedule schedule, Color rowBg, Color lineColor)
+    private void AddShiftPillCell(int rowIdx, int dayIdx, ShiftType st, WeeklySchedule schedule, Color rowBg, Color lineColor)
     {
+        schedule.Language = Lang;
+        schedule.MorningColorKey = _state.Settings.MorningColorKey;
+        schedule.MidColorKey = _state.Settings.MidColorKey;
+        schedule.EveningColorKey = _state.Settings.EveningColorKey;
+        schedule.FullColorKey = _state.Settings.FullColorKey;
+        schedule.OffColorKey = _state.Settings.OffColorKey;
+
         var (label, timeText, pillBg, pillBorder, pillFg) = ImageExportService.GetShiftColors(st, schedule, true);
 
         var cell = new Border
@@ -689,7 +810,9 @@ public partial class MainWindow : Window
             BorderBrush = new SolidColorBrush(pillBorder),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(6, 6, 6, 6)
+            Padding = new Thickness(6, 6, 6, 6),
+            Cursor = Cursors.Hand,
+            ToolTip = LocalizationService.T(Lang, "Değiştirmek için tıklayın", "Click to edit shift")
         };
 
         var sp = new StackPanel { HorizontalAlignment = HorizontalAlignment.Center };
@@ -716,17 +839,86 @@ public partial class MainWindow : Window
         }
 
         pill.Child = sp;
+
+        pill.MouseLeftButtonUp += (_, e) =>
+        {
+            e.Handled = true;
+            OpenShiftEditMenu(pill, schedule, rowIdx, dayIdx);
+        };
+
         cell.Child = pill;
-        Grid.SetRow(cell, row);
-        Grid.SetColumn(cell, col);
+        Grid.SetRow(cell, rowIdx + 1);
+        Grid.SetColumn(cell, dayIdx + 1);
         ShiftTableGrid.Children.Add(cell);
+    }
+
+    private void OpenShiftEditMenu(FrameworkElement target, WeeklySchedule schedule, int rowIdx, int dayIdx)
+    {
+        var menu = new ContextMenu();
+        var shiftTypes = new[] { ShiftType.Morning, ShiftType.Mid, ShiftType.Evening, ShiftType.Full, ShiftType.Off };
+
+        foreach (var candidate in shiftTypes)
+        {
+            var (_, _, _, _, fg) = ImageExportService.GetShiftColors(candidate, schedule, true);
+            string shiftName = LocalizationService.GetShiftLabel(candidate, Lang, false);
+
+            var headerPanel = new StackPanel { Orientation = Orientation.Horizontal };
+            headerPanel.Children.Add(new TextBlock
+            {
+                Text = "●",
+                Foreground = new SolidColorBrush(fg),
+                FontSize = 12,
+                Margin = new Thickness(0, 0, 8, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            });
+            headerPanel.Children.Add(new TextBlock
+            {
+                Text = shiftName,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+
+            var item = new MenuItem { Header = headerPanel };
+            var chosenType = candidate;
+            item.Click += (_, _) =>
+            {
+                UpdateScheduleCell(schedule, rowIdx, dayIdx, chosenType);
+            };
+            menu.Items.Add(item);
+        }
+
+        menu.PlacementTarget = target;
+        menu.IsOpen = true;
+    }
+
+    private void UpdateScheduleCell(WeeklySchedule schedule, int rowIdx, int dayIdx, ShiftType newType)
+    {
+        if (rowIdx < 0 || rowIdx >= schedule.Rows.Count || dayIdx < 0 || dayIdx >= 7) return;
+
+        var row = schedule.Rows[rowIdx];
+        row.Days[dayIdx] = newType;
+
+        row.MorningCount = row.Days.Count(d => d == ShiftType.Morning);
+        row.MidCount = row.Days.Count(d => d == ShiftType.Mid);
+        row.EveningCount = row.Days.Count(d => d == ShiftType.Evening);
+        row.OffCount = row.Days.Count(d => d == ShiftType.Off);
+        row.FullCount = row.Days.Count(d => d == ShiftType.Full);
+
+        schedule.HasFullShifts = schedule.Rows.Any(r => r.FullCount > 0);
+
+        _persistence.SaveToHistory(schedule);
+        _history = _persistence.LoadHistory();
+
+        RefreshDynamicStatusAndRules();
+        RenderShiftTable();
+        RenderHistoryList();
+        PerformAutoSave();
     }
 
     private void AddDraftCell(int row, int col, PersonConfig person, int dayIdx, Color rowBg, Color lineColor)
     {
         bool isKnownLeave =
-            (!_state.Settings.NoLeaveForAll && _state.Settings.BulkSundayLeave && dayIdx == 6) ||
-            (!_state.Settings.NoLeaveForAll && !_state.Settings.BulkSundayLeave && person.LeaveMode == LeaveMode.BelirliGun && person.SelectedDayIndex == dayIdx);
+            (!_state.Settings.NoLeaveForAll && _state.Settings.BulkLastDayLeave && dayIdx == 6) ||
+            (!_state.Settings.NoLeaveForAll && !_state.Settings.BulkLastDayLeave && person.LeaveMode == LeaveMode.FixedDay && person.SelectedDayIndex == dayIdx);
 
         bool isKnownFull = _state.Settings.EnableFullShifts &&
                            dayIdx < _state.Settings.FullPersonIdByDay.Count &&
@@ -743,20 +935,20 @@ public partial class MainWindow : Window
         Border pill;
         if (isKnownLeave)
         {
-            var (_, _, bg, bd, fg) = ImageExportService.GetShiftColors(ShiftType.Izin, null, true);
-            pill = CreateDraftPill("İZİN", bg, bd, fg, true);
+            var (lbl, _, bg, bd, fg) = ImageExportService.GetShiftColors(ShiftType.Off, null, true, _state.Settings);
+            pill = CreateDraftPill(lbl, bg, bd, fg, true);
         }
         else if (isKnownFull)
         {
-            var (_, _, bg, bd, fg) = ImageExportService.GetShiftColors(ShiftType.Full, null, true);
-            pill = CreateDraftPill("FULL", bg, bd, fg, true);
+            var (lbl, _, bg, bd, fg) = ImageExportService.GetShiftColors(ShiftType.Full, null, true, _state.Settings);
+            pill = CreateDraftPill(lbl, bg, bd, fg, true);
         }
         else
         {
             Color bg = Color.FromRgb(36, 39, 44);
             Color bd = Color.FromRgb(54, 58, 66);
             Color fg = Color.FromRgb(110, 119, 133);
-            pill = CreateDraftPill("Bekliyor", bg, bd, fg, false);
+            pill = CreateDraftPill(LocalizationService.T(Lang, "Bekliyor", "Pending"), bg, bd, fg, false);
         }
 
         cell.Child = pill;
@@ -812,13 +1004,14 @@ public partial class MainWindow : Window
 
     private void UpdateHistoryTabTitle()
     {
-        TabHistory.Content = $"🗂 Geçmiş ({_history.Count})";
+        TabHistory.Content = LocalizationService.T(Lang, $"🗂 Geçmiş ({_history.Count})", $"🗂 History ({_history.Count})");
     }
 
     private void RenderHistoryList()
     {
         HistoryListPanel.Children.Clear();
         UpdateHistoryTabTitle();
+        BtnClearAllHistory.IsEnabled = _history.Count > 0;
 
         if (_history.Count == 0)
         {
@@ -830,7 +1023,10 @@ public partial class MainWindow : Window
             emptyCard.SetResourceReference(Border.BackgroundProperty, "SubtleFillBrush");
             var tb = new TextBlock
             {
-                Text = "Henüz kaydedilmiş geçmiş shift bulunmuyor. Ana ekrandan 'OLUŞTUR' butonuna bastığınızda kayıtlar burada listelenir.",
+                Text = LocalizationService.T(
+                    Lang,
+                    "Henüz kaydedilmiş geçmiş shift bulunmuyor.",
+                    "No saved shift history yet."),
                 FontSize = 13,
                 TextAlignment = TextAlignment.Center,
                 TextWrapping = TextWrapping.Wrap
@@ -850,7 +1046,7 @@ public partial class MainWindow : Window
                 Padding = new Thickness(14, 12, 14, 12),
                 Margin = new Thickness(0, 0, 0, 8),
                 Cursor = Cursors.Hand,
-                ToolTip = "Tek tıkla bu haftanın shift planını aç"
+                ToolTip = LocalizationService.T(Lang, "Açmak için tıklayın", "Click to open")
             };
             card.SetResourceReference(Border.BackgroundProperty, "CardBgBrush");
             card.SetResourceReference(Border.BorderBrushProperty, "CardBorderBrush");
@@ -866,7 +1062,7 @@ public partial class MainWindow : Window
 
             var btnView = new Button
             {
-                Content = "Aç / Görüntüle",
+                Content = LocalizationService.T(Lang, "Aç", "Open"),
                 Style = (Style)FindResource("PrimaryButton"),
                 Padding = new Thickness(12, 6, 12, 6),
                 FontSize = 12,
@@ -883,7 +1079,7 @@ public partial class MainWindow : Window
             {
                 var btnImg = new Button
                 {
-                    Content = "🖼 Görsel",
+                    Content = LocalizationService.T(Lang, "🖼 Görsel", "🖼 Image"),
                     Style = (Style)FindResource("SecondaryButton"),
                     Padding = new Thickness(10, 6, 10, 6),
                     FontSize = 12,
@@ -903,14 +1099,16 @@ public partial class MainWindow : Window
                 Style = (Style)FindResource("SecondaryButton"),
                 Padding = new Thickness(9, 6, 9, 6),
                 FontSize = 12,
-                ToolTip = "Kaydı geçmişten sil"
+                ToolTip = LocalizationService.T(Lang, "Kaydı sil", "Delete entry")
             };
             btnDel.Click += (_, e) =>
             {
                 e.Handled = true;
                 var res = MessageBox.Show(
-                    $"'{item.WeekDisplayLabel}' tarihli shift kaydı geçmişten silinsin mi?",
-                    "Kaydı Sil",
+                    LocalizationService.T(Lang,
+                        $"'{item.WeekDisplayLabel}' tarihli shift kaydı geçmişten silinsin mi?",
+                        $"Delete shift record '{item.WeekDisplayLabel}' from history?"),
+                    LocalizationService.T(Lang, "Kaydı Sil", "Delete Record"),
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question);
                 if (res == MessageBoxResult.Yes)
@@ -928,7 +1126,7 @@ public partial class MainWindow : Window
             var info = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             var titleTb = new TextBlock
             {
-                Text = $"📅 {item.WeekDisplayLabel}   ({item.WeekStartMonday:dd.MM.yyyy} - {item.WeekEndSunday:dd.MM.yyyy})",
+                Text = $"📅 {item.WeekDisplayLabel}   ({item.WeekStartDate:dd.MM.yyyy} - {item.WeekEndDate:dd.MM.yyyy})",
                 FontSize = 14,
                 FontWeight = FontWeights.Bold
             };
@@ -936,9 +1134,10 @@ public partial class MainWindow : Window
             info.Children.Add(titleTb);
 
             string namesSummary = string.Join(", ", item.Rows.Select(r => r.PersonName));
+            string staffWord = LocalizationService.T(Lang, "Kişi", "Staff");
             var subTb = new TextBlock
             {
-                Text = $"👥 {item.Rows.Count} Kişi ({namesSummary})  •  🕒 {item.CreatedAt:dd.MM.yyyy HH:mm}",
+                Text = $"👥 {item.Rows.Count} {staffWord} ({namesSummary})  •  🕒 {item.CreatedAt:dd.MM.yyyy HH:mm}",
                 FontSize = 12,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 Margin = new Thickness(0, 3, 12, 0)
@@ -955,43 +1154,65 @@ public partial class MainWindow : Window
     private void LoadScheduleFromHistory(WeeklySchedule item)
     {
         _state.CurrentSchedule = item;
-        _state.TargetMondayDate = item.WeekStartMonday;
+        _state.TargetStartDate = item.WeekStartDate.Date;
 
         _isLoadingUi = true;
-        DpTargetWeek.SelectedDate = _state.TargetMondayDate;
-        TxtActiveWeekLabel.Text = WeekDateHelper.GetWeekDisplayLabel(_state.TargetMondayDate);
+        DpStartDate.SelectedDate = _state.TargetStartDate;
+        DpEndDate.SelectedDate = WeekDateHelper.GetWeekEnd(_state.TargetStartDate);
         _isLoadingUi = false;
 
         TabPlanner.IsChecked = true;
+        ApplyLanguage();
         RefreshDynamicStatusAndRules();
         RenderShiftTable();
         ScheduleAutoSave();
     }
 
-    // =========================================================================
-    // EVENT HANDLERS
-    // =========================================================================
+    private void BtnLanguage_Click(object sender, RoutedEventArgs e)
+    {
+        var menu = new ContextMenu();
+
+        var trItem = new MenuItem { Header = "TR" };
+        trItem.Click += (_, _) => SetLanguage(AppLanguage.Tr);
+
+        var enItem = new MenuItem { Header = "EN" };
+        enItem.Click += (_, _) => SetLanguage(AppLanguage.En);
+
+        menu.Items.Add(trItem);
+        menu.Items.Add(enItem);
+
+        menu.PlacementTarget = BtnLanguage;
+        menu.IsOpen = true;
+    }
+
+    private void SetLanguage(AppLanguage lang)
+    {
+        if (_state.Settings.Language == lang) return;
+        _state.Settings.Language = lang;
+        ApplyLanguage();
+        RefreshDynamicStatusAndRules();
+        RenderShiftTable();
+        RenderHistoryList();
+        ScheduleAutoSave();
+    }
 
     private void BtnSecretHeart_Click(object sender, RoutedEventArgs e)
     {
         _isGiftOpen = !_isGiftOpen;
 
         var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-        var widthAnim = new DoubleAnimation
+        GiftMessagePill.BeginAnimation(WidthProperty, new DoubleAnimation
         {
-            To = _isGiftOpen ? 168 : 0,
+            To = _isGiftOpen ? 104 : 0,
             Duration = TimeSpan.FromMilliseconds(240),
             EasingFunction = ease
-        };
-        var opacityAnim = new DoubleAnimation
+        });
+        GiftMessagePill.BeginAnimation(OpacityProperty, new DoubleAnimation
         {
             To = _isGiftOpen ? 1.0 : 0.0,
             Duration = TimeSpan.FromMilliseconds(200),
             EasingFunction = ease
-        };
-
-        GiftMessagePill.BeginAnimation(WidthProperty, widthAnim);
-        GiftMessagePill.BeginAnimation(OpacityProperty, opacityAnim);
+        });
     }
 
     private void ExpanderLayout_Changed(object sender, RoutedEventArgs e)
@@ -1020,11 +1241,12 @@ public partial class MainWindow : Window
 
     private void BtnAddPerson_Click(object sender, RoutedEventArgs e)
     {
-        if (_state.People.Count >= 10) return;
+        if (_state.People.Count >= 30) return;
+        string prefix = LocalizationService.T(Lang, "Personel", "Staff");
         _state.People.Add(new PersonConfig
         {
-            Name = $"Personel {_state.People.Count + 1}",
-            LeaveMode = LeaveMode.Rastgele
+            Name = $"{prefix} {_state.People.Count + 1}",
+            LeaveMode = LeaveMode.Random
         });
         RebuildPersonRows();
         RebuildMainFullDaySelectors();
@@ -1036,15 +1258,15 @@ public partial class MainWindow : Window
         if (_isLoadingUi) return;
 
         _isLoadingUi = true;
-        if (sender == ChkBulkSunday)
+        if (sender == ChkBulkLastDay)
         {
-            _state.Settings.BulkSundayLeave = ChkBulkSunday.IsChecked == true;
+            _state.Settings.BulkLastDayLeave = ChkBulkLastDay.IsChecked == true;
             ChkNoLeaveAll.IsChecked = _state.Settings.NoLeaveForAll;
         }
         else if (sender == ChkNoLeaveAll)
         {
             _state.Settings.NoLeaveForAll = ChkNoLeaveAll.IsChecked == true;
-            ChkBulkSunday.IsChecked = _state.Settings.BulkSundayLeave;
+            ChkBulkLastDay.IsChecked = _state.Settings.BulkLastDayLeave;
         }
         _isLoadingUi = false;
 
@@ -1055,12 +1277,12 @@ public partial class MainWindow : Window
     private void BtnAllRandomLeave_Click(object sender, RoutedEventArgs e)
     {
         _isLoadingUi = true;
-        _state.Settings.BulkSundayLeave = false;
+        _state.Settings.BulkLastDayLeave = false;
         _state.Settings.NoLeaveForAll = false;
-        ChkBulkSunday.IsChecked = false;
+        ChkBulkLastDay.IsChecked = false;
         ChkNoLeaveAll.IsChecked = false;
         foreach (var p in _state.People)
-            p.LeaveMode = LeaveMode.Rastgele;
+            p.LeaveMode = LeaveMode.Random;
         _isLoadingUi = false;
 
         RebuildPersonRows();
@@ -1096,30 +1318,23 @@ public partial class MainWindow : Window
     {
         if (_isLoadingUi) return;
 
-        ReadTimeCombo(_state.Settings.SabahTime, MainSabahSH, MainSabahSM, MainSabahEH, MainSabahEM);
-        ReadTimeCombo(_state.Settings.AraTime, MainAraSH, MainAraSM, MainAraEH, MainAraEM);
-        ReadTimeCombo(_state.Settings.AksamTime, MainAksamSH, MainAksamSM, MainAksamEH, MainAksamEM);
+        ReadTimeCombo(_state.Settings.MorningTime, MainMorningSH, MainMorningSM, MainMorningEH, MainMorningEM);
+        ReadTimeCombo(_state.Settings.MidTime, MainMidSH, MainMidSM, MainMidEH, MainMidEM);
+        ReadTimeCombo(_state.Settings.EveningTime, MainEveningSH, MainEveningSM, MainEveningEH, MainEveningEM);
         ReadTimeCombo(_state.Settings.FullTime, MainFullSH, MainFullSM, MainFullEH, MainFullEM);
 
-        LegendSabah.Text = $"● Sabahçı: {_state.Settings.SabahTime.Formatted}";
-        LegendAra.Text = $"● Ara Shift: {_state.Settings.AraTime.Formatted}";
-        LegendAksam.Text = $"● Akşamcı: {_state.Settings.AksamTime.Formatted}";
-        LegendFull.Text = $"● FULL: {_state.Settings.FullTime.Formatted}";
-
+        UpdateLegendTexts();
         RefreshDynamicStatusAndRules();
         ScheduleAutoSave();
     }
 
-    private void BtnSelectFolder_Click(object sender, RoutedEventArgs e)
-    {
-        PromptAndSelectSaveFolder();
-    }
+    private void BtnSelectFolder_Click(object sender, RoutedEventArgs e) => PromptAndSelectSaveFolder();
 
     private bool PromptAndSelectSaveFolder()
     {
         var dialog = new OpenFolderDialog
         {
-            Title = "Shift görsellerinin kaydedileceği klasörü seçin",
+            Title = LocalizationService.T(Lang, "Shift görsellerinin kaydedileceği klasörü seçin", "Select folder to save shift images"),
             InitialDirectory = Directory.Exists(_state.SaveFolderPath)
                 ? _state.SaveFolderPath
                 : PersistenceService.GetDefaultSaveFolder()
@@ -1150,28 +1365,39 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Klasör açılamadı: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(
+                LocalizationService.T(Lang, $"Klasör açılamadı: {ex.Message}", $"Could not open folder: {ex.Message}"),
+                LocalizationService.T(Lang, "Hata", "Error"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
 
     private void BtnPrevWeek_Click(object sender, RoutedEventArgs e) =>
-        SetTargetWeek(_state.TargetMondayDate.AddDays(-7));
+        SetTargetWeekStart(_state.TargetStartDate.AddDays(-7));
 
     private void BtnNextWeek_Click(object sender, RoutedEventArgs e) =>
-        SetTargetWeek(_state.TargetMondayDate.AddDays(7));
+        SetTargetWeekStart(_state.TargetStartDate.AddDays(7));
 
-    private void DpTargetWeek_SelectedDateChanged(object? sender, SelectionChangedEventArgs e)
+    private void DpStartDate_SelectedDateChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (_isLoadingUi || !DpTargetWeek.SelectedDate.HasValue) return;
-        SetTargetWeek(DpTargetWeek.SelectedDate.Value);
+        if (_isLoadingUi || !DpStartDate.SelectedDate.HasValue) return;
+        SetTargetWeekStart(DpStartDate.SelectedDate.Value);
     }
 
-    private void SetTargetWeek(DateTime date)
+    private void DpEndDate_SelectedDateChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_isLoadingUi || !DpEndDate.SelectedDate.HasValue) return;
+        SetTargetWeekStart(DpEndDate.SelectedDate.Value.AddDays(-6));
+    }
+
+    private void SetTargetWeekStart(DateTime startDate)
     {
         _isLoadingUi = true;
-        _state.TargetMondayDate = WeekDateHelper.GetMonday(date);
-        DpTargetWeek.SelectedDate = _state.TargetMondayDate;
-        TxtActiveWeekLabel.Text = WeekDateHelper.GetWeekDisplayLabel(_state.TargetMondayDate);
+        _state.TargetStartDate = startDate.Date;
+        DpStartDate.SelectedDate = _state.TargetStartDate;
+        DpEndDate.SelectedDate = WeekDateHelper.GetWeekEnd(_state.TargetStartDate);
+        ApplyLanguage();
         _isLoadingUi = false;
 
         OnInputsChanged(invalidateSchedule: true);
@@ -1193,19 +1419,23 @@ public partial class MainWindow : Window
         }
     }
 
-    private void BtnBackToPlanner_Click(object sender, RoutedEventArgs e)
+    private void BtnClearAllHistory_Click(object sender, RoutedEventArgs e)
     {
-        TabPlanner.IsChecked = true;
+        _persistence.ClearAllHistory();
+        _history = _persistence.LoadHistory();
+        RenderHistoryList();
+        RefreshDynamicStatusAndRules();
     }
 
     private void BtnCustomize_Click(object sender, RoutedEventArgs e)
     {
-        var dlg = new CustomizeWindow(_state.Settings, _state.People) { Owner = this };
+        var dlg = new CustomizeWindow(_state.Settings, _state.People, _state.TargetStartDate) { Owner = this };
         if (dlg.ShowDialog() == true)
         {
             _state.Settings = dlg.WorkingSettings;
             _state.Settings.ThemeMode = AppThemeMode.Dark;
             SyncUiFromState();
+            ApplyLanguage();
             OnInputsChanged(invalidateSchedule: true);
         }
     }
@@ -1215,8 +1445,10 @@ public partial class MainWindow : Window
         if (!_state.HasUserChosenSaveFolder)
         {
             var answer = MessageBox.Show(
-                $"Henüz kayıt konumu seçmediniz.\n\nOluşturulacak shift görseli şu klasöre kaydedilsin mi?\n{_state.SaveFolderPath}\n\nFarklı klasör seçmek için 'Hayır'a tıklayın.",
-                "Kayıt Konumu Seçimi",
+                LocalizationService.T(Lang,
+                    $"Henüz kayıt konumu seçmediniz.\n\nOluşturulacak shift görseli şu klasöre kaydedilsin mi?\n{_state.SaveFolderPath}\n\nFarklı klasör seçmek için 'Hayır'a tıklayın.",
+                    $"You haven't selected a save folder yet.\n\nSave exported shift image to this folder?\n{_state.SaveFolderPath}\n\nClick 'No' to choose another folder."),
+                LocalizationService.T(Lang, "Kayıt Konumu Seçimi", "Save Folder Selection"),
                 MessageBoxButton.YesNoCancel,
                 MessageBoxImage.Question);
 
@@ -1231,10 +1463,14 @@ public partial class MainWindow : Window
             }
         }
 
-        var result = _generator.Generate(_state.People, _state.TargetMondayDate, _state.Settings, _history);
+        var result = _generator.Generate(_state.People, _state.TargetStartDate, _state.Settings, _history);
         if (!result.Success || result.Schedule == null)
         {
-            MessageBox.Show(result.ErrorMessage ?? "Shift oluşturulamadı.", "Uyarı", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(
+                result.ErrorMessage ?? LocalizationService.T(Lang, "Shift oluşturulamadı.", "Could not generate shift."),
+                LocalizationService.T(Lang, "Uyarı", "Warning"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
             return;
         }
 
@@ -1247,7 +1483,11 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Shift oluşturuldu ancak görsel kaydedilemedi:\n{ex.Message}", "Görsel Kayıt Hatası", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(
+                LocalizationService.T(Lang, $"Shift oluşturuldu ancak görsel kaydedilemedi:\n{ex.Message}", $"Schedule created but image could not be saved:\n{ex.Message}"),
+                LocalizationService.T(Lang, "Görsel Kayıt Hatası", "Image Export Error"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
         }
 
         _state.CurrentSchedule = schedule;
@@ -1275,15 +1515,30 @@ public partial class MainWindow : Window
         {
             _state.CurrentSchedule.ShowHoursInTable = _state.Settings.ShowHoursInTable;
             _state.CurrentSchedule.ShowSummaryColumns = _state.Settings.ShowSummaryColumns;
+            _state.CurrentSchedule.Language = Lang;
+            _state.CurrentSchedule.MorningColorKey = _state.Settings.MorningColorKey;
+            _state.CurrentSchedule.MidColorKey = _state.Settings.MidColorKey;
+            _state.CurrentSchedule.EveningColorKey = _state.Settings.EveningColorKey;
+            _state.CurrentSchedule.FullColorKey = _state.Settings.FullColorKey;
+            _state.CurrentSchedule.OffColorKey = _state.Settings.OffColorKey;
+
             string imgPath = _exporter.ExportScheduleImage(_state.CurrentSchedule, _state.SaveFolderPath, _state.Settings.ExportFormat, AppThemeMode.Dark);
             _state.CurrentSchedule.ImageFilePath = imgPath;
             RenderShiftTable();
             PerformAutoSave();
-            MessageBox.Show($"Görsel kaydedildi:\n{imgPath}", "Başarılı", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(
+                LocalizationService.T(Lang, $"Görsel kaydedildi:\n{imgPath}", $"Image saved:\n{imgPath}"),
+                LocalizationService.T(Lang, "Başarılı", "Success"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Görsel aktarılamadı: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(
+                LocalizationService.T(Lang, $"Görsel aktarılamadı: {ex.Message}", $"Could not export image: {ex.Message}"),
+                LocalizationService.T(Lang, "Hata", "Error"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
 
@@ -1299,7 +1554,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Dosya açılamadı: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 }

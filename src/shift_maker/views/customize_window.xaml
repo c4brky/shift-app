@@ -1,13 +1,13 @@
-<!-- Hey! Sonunda beni bulabildin, seni tebrik ediyorum. <3 | created by c4brky -->
-<Window x:Class="ShiftHazirlayici.Views.CustomizeWindow"
+<!-- created by c4brky -->
+<Window x:Class="ShiftMaker.Views.CustomizeWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="SHIFT HAZIRLAYICI — Özelleştirme"
-        Icon="pack://application:,,,/Assets/app.ico"
-        Width="740"
-        Height="700"
-        MinWidth="560"
-        MinHeight="460"
+        Title="SHIFT MAKER — Customize"
+        Icon="pack://application:,,,/assets/app.ico"
+        Width="760"
+        Height="720"
+        MinWidth="580"
+        MinHeight="480"
         ResizeMode="CanResize"
         WindowStartupLocation="CenterOwner"
         Background="{DynamicResource BgCanvasBrush}"
@@ -20,75 +20,51 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Header + Discreet Heart Gift -->
-        <DockPanel Grid.Row="0" Margin="0,0,0,14">
-            <StackPanel DockPanel.Dock="Right"
-                        Orientation="Horizontal"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Top"
-                        Margin="10,2,0,0">
-                <Border x:Name="CustomizeGiftPill"
-                        Width="0"
-                        Opacity="0"
-                        ClipToBounds="True"
-                        Background="#351621"
-                        BorderBrush="#E11D48"
-                        BorderThickness="1"
-                        CornerRadius="15"
-                        Height="30"
-                        Margin="0,0,6,0"
-                        VerticalAlignment="Center">
-                    <TextBlock Text="Berkay'dan hediye &lt;3"
-                               FontSize="11.5"
-                               FontWeight="SemiBold"
-                               Foreground="#FDA4AF"
-                               VerticalAlignment="Center"
-                               HorizontalAlignment="Center"
-                               Margin="12,0"
-                               TextWrapping="NoWrap"/>
-                </Border>
-                <Button Width="30"
-                        Height="30"
-                        Cursor="Hand"
-                        ToolTip="♥"
-                        Click="BtnCustomizeHeart_Click">
-                    <Button.Template>
-                        <ControlTemplate TargetType="Button">
-                            <Border x:Name="HeartBd"
-                                    Background="#24272C"
-                                    BorderBrush="#3B404A"
-                                    BorderThickness="1"
-                                    CornerRadius="15">
-                                <TextBlock x:Name="HeartGlyph"
-                                           Text="♥"
-                                           FontSize="13.5"
-                                           Foreground="#FB7185"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"/>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="HeartBd" Property="Background" Value="#351621"/>
-                                    <Setter TargetName="HeartBd" Property="BorderBrush" Value="#E11D48"/>
-                                    <Setter TargetName="HeartGlyph" Property="Foreground" Value="#FDA4AF"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Button.Template>
-                </Button>
-            </StackPanel>
+        <!-- Header + GitHub Info Link -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,12">
+            <Button x:Name="BtnGitHubInfo"
+                    DockPanel.Dock="Right"
+                    Width="30"
+                    Height="30"
+                    Margin="10,2,0,0"
+                    VerticalAlignment="Top"
+                    Cursor="Hand"
+                    ToolTip="GitHub — c4brky/shift-maker"
+                    Click="BtnGitHubInfo_Click">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="InfoBd"
+                                Background="#132238"
+                                BorderBrush="#2563EB"
+                                BorderThickness="1"
+                                CornerRadius="15">
+                            <TextBlock x:Name="InfoGlyph"
+                                       Text="i"
+                                       FontSize="14"
+                                       FontWeight="Bold"
+                                       FontStyle="Italic"
+                                       Foreground="#60A5FA"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="InfoBd" Property="Background" Value="#1D3557"/>
+                                <Setter TargetName="InfoBd" Property="BorderBrush" Value="#60A5FA"/>
+                                <Setter TargetName="InfoGlyph" Property="Foreground" Value="#BFDBFE"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
 
-            <StackPanel DockPanel.Dock="Left">
-                <TextBlock Text="⚙ Gelişmiş Shift Özelleştirme"
-                           FontSize="19"
-                           FontWeight="Bold"
-                           Foreground="{DynamicResource TextPrimaryBrush}"/>
-                <TextBlock Text="Kutucukları işaretleyerek özelleştirme panellerini açıp kapatabilirsiniz. Seçili ayarlar dinamik kurallara anında yansır."
-                           FontSize="12"
-                           Foreground="{DynamicResource TextSecondaryBrush}"
-                           TextWrapping="Wrap"
-                           Margin="0,3,0,0"/>
-            </StackPanel>
+            <TextBlock x:Name="TxtHeaderTitle"
+                       DockPanel.Dock="Left"
+                       Text="⚙ Özelleştirme"
+                       FontSize="19"
+                       FontWeight="Bold"
+                       VerticalAlignment="Center"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
         </DockPanel>
 
         <!-- Collapsible Sections -->
@@ -99,7 +75,20 @@
                       Padding="0,0,6,0">
             <StackPanel x:Name="SectionsStack">
 
-                <!-- 1. Mesai Saatleri -->
+                <!-- 1. Shift Colors -->
+                <Border Style="{StaticResource FluentCard}" Margin="0,0,0,10" Padding="14">
+                    <StackPanel>
+                        <TextBlock x:Name="TxtColorsHeader"
+                                   Text="🎨 Shift Renkleri"
+                                   FontWeight="Bold"
+                                   FontSize="13.5"
+                                   Margin="0,0,0,10"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <StackPanel x:Name="ColorPickersPanel"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 2. Work Hours -->
                 <Border Style="{StaticResource FluentCard}" Margin="0,0,0,10" Padding="0">
                     <StackPanel>
                         <Border Background="{DynamicResource SubtleFillBrush}" CornerRadius="11" Padding="14,10">
@@ -107,12 +96,9 @@
                                       IsChecked="{Binding EnableCustomHours, Mode=TwoWay}"
                                       Checked="SectionToggle_Changed"
                                       Unchecked="SectionToggle_Changed">
-                                <StackPanel>
-                                    <TextBlock Text="Mesai Saatlerini Özelleştir (Sabah / Ara / Akşam / Full)"
-                                               FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap"/>
-                                    <TextBlock Text="Saatler 07 - 22 arası, dakikalar 00 / 15 / 30 / 45 olarak seçilir"
-                                               FontSize="11.5" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
-                                </StackPanel>
+                                <TextBlock x:Name="TxtCustomHoursHeader"
+                                           Text="Mesai Saatleri (07:00 – 22:00)"
+                                           FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap"/>
                             </CheckBox>
                         </Border>
                         <Border Padding="14,12,14,14"
@@ -123,15 +109,15 @@
                                         <ColumnDefinition Width="95"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Sabahçı:" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="#FBBF24"/>
+                                    <TextBlock x:Name="LblMorning" Grid.Column="0" Text="Sabahçı:" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="#7DD3FC"/>
                                     <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <ComboBox x:Name="CmbSabahStartH" Width="58" Margin="0,2,2,2" SelectionChanged="AnyTimeChanged"/>
+                                        <ComboBox x:Name="CmbMorningStartH" Width="58" Margin="0,2,2,2" SelectionChanged="AnyTimeChanged"/>
                                         <TextBlock Text=":" VerticalAlignment="Center" Margin="2,0" FontWeight="Bold"/>
-                                        <ComboBox x:Name="CmbSabahStartM" Width="58" Margin="2,2,8,2" SelectionChanged="AnyTimeChanged"/>
+                                        <ComboBox x:Name="CmbMorningStartM" Width="58" Margin="2,2,8,2" SelectionChanged="AnyTimeChanged"/>
                                         <TextBlock Text="→" VerticalAlignment="Center" Margin="4,0,10,0" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                        <ComboBox x:Name="CmbSabahEndH" Width="58" Margin="0,2,2,2" SelectionChanged="AnyTimeChanged"/>
+                                        <ComboBox x:Name="CmbMorningEndH" Width="58" Margin="0,2,2,2" SelectionChanged="AnyTimeChanged"/>
                                         <TextBlock Text=":" VerticalAlignment="Center" Margin="2,0" FontWeight="Bold"/>
-                                        <ComboBox x:Name="CmbSabahEndM" Width="58" Margin="2,2,0,2" SelectionChanged="AnyTimeChanged"/>
+                                        <ComboBox x:Name="CmbMorningEndM" Width="58" Margin="2,2,0,2" SelectionChanged="AnyTimeChanged"/>
                                     </WrapPanel>
                                 </Grid>
 
@@ -140,15 +126,15 @@
                                         <ColumnDefinition Width="95"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Ara Shift:" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="#7DD3FC"/>
+                                    <TextBlock x:Name="LblMid" Grid.Column="0" Text="Ara Shift:" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="#FBBF24"/>
                                     <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <ComboBox x:Name="CmbAraStartH" Width="58" Margin="0,2,2,2" SelectionChanged="AnyTimeChanged"/>
+                                        <ComboBox x:Name="CmbMidStartH" Width="58" Margin="0,2,2,2" SelectionChanged="AnyTimeChanged"/>
                                         <TextBlock Text=":" VerticalAlignment="Center" Margin="2,0" FontWeight="Bold"/>
-                                        <ComboBox x:Name="CmbAraStartM" Width="58" Margin="2,2,8,2" SelectionChanged="AnyTimeChanged"/>
+                                        <ComboBox x:Name="CmbMidStartM" Width="58" Margin="2,2,8,2" SelectionChanged="AnyTimeChanged"/>
                                         <TextBlock Text="→" VerticalAlignment="Center" Margin="4,0,10,0" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                        <ComboBox x:Name="CmbAraEndH" Width="58" Margin="0,2,2,2" SelectionChanged="AnyTimeChanged"/>
+                                        <ComboBox x:Name="CmbMidEndH" Width="58" Margin="0,2,2,2" SelectionChanged="AnyTimeChanged"/>
                                         <TextBlock Text=":" VerticalAlignment="Center" Margin="2,0" FontWeight="Bold"/>
-                                        <ComboBox x:Name="CmbAraEndM" Width="58" Margin="2,2,0,2" SelectionChanged="AnyTimeChanged"/>
+                                        <ComboBox x:Name="CmbMidEndM" Width="58" Margin="2,2,0,2" SelectionChanged="AnyTimeChanged"/>
                                     </WrapPanel>
                                 </Grid>
 
@@ -157,15 +143,15 @@
                                         <ColumnDefinition Width="95"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Akşamcı:" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="#D1D5DB"/>
+                                    <TextBlock x:Name="LblEvening" Grid.Column="0" Text="Akşamcı:" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="#D1D5DB"/>
                                     <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <ComboBox x:Name="CmbAksamStartH" Width="58" Margin="0,2,2,2" SelectionChanged="AnyTimeChanged"/>
+                                        <ComboBox x:Name="CmbEveningStartH" Width="58" Margin="0,2,2,2" SelectionChanged="AnyTimeChanged"/>
                                         <TextBlock Text=":" VerticalAlignment="Center" Margin="2,0" FontWeight="Bold"/>
-                                        <ComboBox x:Name="CmbAksamStartM" Width="58" Margin="2,2,8,2" SelectionChanged="AnyTimeChanged"/>
+                                        <ComboBox x:Name="CmbEveningStartM" Width="58" Margin="2,2,8,2" SelectionChanged="AnyTimeChanged"/>
                                         <TextBlock Text="→" VerticalAlignment="Center" Margin="4,0,10,0" FontWeight="Bold" Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                        <ComboBox x:Name="CmbAksamEndH" Width="58" Margin="0,2,2,2" SelectionChanged="AnyTimeChanged"/>
+                                        <ComboBox x:Name="CmbEveningEndH" Width="58" Margin="0,2,2,2" SelectionChanged="AnyTimeChanged"/>
                                         <TextBlock Text=":" VerticalAlignment="Center" Margin="2,0" FontWeight="Bold"/>
-                                        <ComboBox x:Name="CmbAksamEndM" Width="58" Margin="2,2,0,2" SelectionChanged="AnyTimeChanged"/>
+                                        <ComboBox x:Name="CmbEveningEndM" Width="58" Margin="2,2,0,2" SelectionChanged="AnyTimeChanged"/>
                                     </WrapPanel>
                                 </Grid>
 
@@ -174,7 +160,7 @@
                                         <ColumnDefinition Width="95"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="Full Kalma:" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="#FDA4AF"/>
+                                    <TextBlock x:Name="LblFull" Grid.Column="0" Text="Full Kalma:" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="#FDA4AF"/>
                                     <WrapPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                         <ComboBox x:Name="CmbFullStartH" Width="58" Margin="0,2,2,2" SelectionChanged="AnyTimeChanged"/>
                                         <TextBlock Text=":" VerticalAlignment="Center" Margin="2,0" FontWeight="Bold"/>
@@ -190,7 +176,7 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 2. Full Kalma (İsteğe Bağlı, Gün Gün Kişi Seçimi) -->
+                <!-- 3. Full Shift -->
                 <Border Style="{StaticResource FluentCard}" Margin="0,0,0,10" Padding="0">
                     <StackPanel>
                         <Border Background="{DynamicResource SubtleFillBrush}" CornerRadius="11" Padding="14,10">
@@ -198,18 +184,16 @@
                                       IsChecked="{Binding EnableFullShifts, Mode=TwoWay}"
                                       Checked="SectionToggle_Changed"
                                       Unchecked="SectionToggle_Changed">
-                                <StackPanel>
-                                    <TextBlock Text="Full Kalma Seçeneğini Aktifleştir (İsteğe Bağlı)"
-                                               FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap"/>
-                                    <TextBlock Text="Zorunlu değildir — açıldığında Pazartesi'den Pazar'a gün gün kim Full kalacaksa seçilir"
-                                               FontSize="11.5" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
-                                </StackPanel>
+                                <TextBlock x:Name="TxtFullHeader"
+                                           Text="Full Kalma (İsteğe Bağlı)"
+                                           FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap"/>
                             </CheckBox>
                         </Border>
                         <StackPanel Margin="14,12,14,14"
                                     Visibility="{Binding IsChecked, ElementName=ChkEnableFullShifts, Converter={StaticResource BoolToVis}}">
                             <StackPanel x:Name="FullDaysPanel"/>
-                            <Button Content="Tüm Full Seçimlerini Temizle"
+                            <Button x:Name="BtnClearFull"
+                                    Content="Tüm Full Seçimlerini Temizle"
                                     Style="{StaticResource SecondaryButton}"
                                     HorizontalAlignment="Left"
                                     Padding="10,5"
@@ -220,7 +204,7 @@
                     </StackPanel>
                 </Border>
 
-                <!-- 3. İzin Kuralları -->
+                <!-- 4. Leave Rules -->
                 <Border Style="{StaticResource FluentCard}" Margin="0,0,0,10" Padding="0">
                     <StackPanel>
                         <Border Background="{DynamicResource SubtleFillBrush}" CornerRadius="11" Padding="14,10">
@@ -228,39 +212,35 @@
                                       IsChecked="{Binding EnableLeaveCustomization, Mode=TwoWay}"
                                       Checked="SectionToggle_Changed"
                                       Unchecked="SectionToggle_Changed">
-                                <StackPanel>
-                                    <TextBlock Text="İzin Kuralları &amp; Toplu Seçim Özelleştirme"
-                                               FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap"/>
-                                    <TextBlock Text="Hafta içi / Pazar toplu izni, izin kapatma ve çakışma kuralları"
-                                               FontSize="11.5" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
-                                </StackPanel>
+                                <TextBlock x:Name="TxtLeaveHeader"
+                                           Text="İzin Kuralları &amp; Toplu Seçim"
+                                           FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap"/>
                             </CheckBox>
                         </Border>
                         <StackPanel Margin="14,12,14,14"
                                     Visibility="{Binding IsChecked, ElementName=ChkLeaveCustomization, Converter={StaticResource BoolToVis}}">
-                            <CheckBox Content="Toplu Pazar İzni (Tüm personel Pazar günü izinli olsun)"
-                                      IsChecked="{Binding BulkSundayLeave, Mode=TwoWay}"
+                            <CheckBox x:Name="ChkCustBulkLastDay"
+                                      Content="Toplu Pazar İzni"
+                                      IsChecked="{Binding BulkLastDayLeave, Mode=TwoWay}"
                                       Margin="0,0,0,8"/>
-                            <CheckBox Content="Bu hafta hiç izin verilmesin (İzinleri tamamen kapat)"
+                            <CheckBox x:Name="ChkCustNoLeave"
+                                      Content="Bu hafta hiç izin verilmesin"
                                       IsChecked="{Binding NoLeaveForAll, Mode=TwoWay}"
                                       Margin="0,0,0,8"/>
-                            <CheckBox Content="İzin günlerinin çakışmasına izin ver (Normalde kapalıdır)"
+                            <CheckBox x:Name="ChkCustOverlap"
+                                      Content="İzin günlerinin çakışmasına izin ver"
                                       IsChecked="{Binding AllowLeaveOverlap, Mode=TwoWay}"
                                       Margin="0,0,0,10"/>
 
                             <WrapPanel Orientation="Horizontal">
-                                <TextBlock Text="Rastgele İzin Kapsamı:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,2,10,2"/>
-                                <ComboBox x:Name="CmbRandomScope" Width="220" SelectionChanged="CmbRandomScope_SelectionChanged">
-                                    <ComboBoxItem Content="Hafta İçi (Pazartesi - Cuma)" Tag="0"/>
-                                    <ComboBoxItem Content="Pazartesi - Cumartesi" Tag="1"/>
-                                    <ComboBoxItem Content="Tüm Hafta (Pazartesi - Pazar)" Tag="2"/>
-                                </ComboBox>
+                                <TextBlock x:Name="LblRandomScope" Text="Rastgele İzin Kapsamı:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,2,10,2"/>
+                                <ComboBox x:Name="CmbRandomScope" Width="220" SelectionChanged="CmbRandomScope_SelectionChanged"/>
                             </WrapPanel>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <!-- 4. Günlük Shift Dağılımı -->
+                <!-- 5. Daily Shift Distribution -->
                 <Border Style="{StaticResource FluentCard}" Margin="0,0,0,10" Padding="0">
                     <StackPanel>
                         <Border Background="{DynamicResource SubtleFillBrush}" CornerRadius="11" Padding="14,10">
@@ -268,63 +248,62 @@
                                       IsChecked="{Binding EnableDistributionCustomization, Mode=TwoWay}"
                                       Checked="SectionToggle_Changed"
                                       Unchecked="SectionToggle_Changed">
-                                <StackPanel>
-                                    <TextBlock Text="Günlük Shift Sayılarını Özelleştir"
-                                               FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap"/>
-                                    <TextBlock Text="Varsayılan: Her gün 1 Sabahçı, 1 Ara Shift, geri kalanı Akşamcı"
-                                               FontSize="11.5" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
-                                </StackPanel>
+                                <TextBlock x:Name="TxtDistHeader"
+                                           Text="Günlük Shift Sayıları"
+                                           FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap"/>
                             </CheckBox>
                         </Border>
                         <StackPanel Margin="14,12,14,14"
                                     Visibility="{Binding IsChecked, ElementName=ChkDistCustomization, Converter={StaticResource BoolToVis}}">
                             <WrapPanel Orientation="Horizontal" Margin="0,0,0,10">
                                 <StackPanel Orientation="Horizontal" Margin="0,2,20,2">
-                                    <TextBlock Text="Günlük Sabahçı:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <ComboBox x:Name="CmbDailySabah" Width="76" SelectionChanged="CmbDailyCountChanged"/>
+                                    <TextBlock x:Name="LblDailyMorning" Text="Günlük Sabahçı:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <ComboBox x:Name="CmbDailyMorning" Width="76" SelectionChanged="CmbDailyCountChanged"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-                                    <TextBlock Text="Günlük Ara Shift:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <ComboBox x:Name="CmbDailyAra" Width="76" SelectionChanged="CmbDailyCountChanged"/>
+                                    <TextBlock x:Name="LblDailyMid" Text="Günlük Ara Shift:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <ComboBox x:Name="CmbDailyMid" Width="76" SelectionChanged="CmbDailyCountChanged"/>
                                 </StackPanel>
                             </WrapPanel>
-                            <CheckBox Content="Günde 2 kişi çalışırken: 1 Sabahçı + 1 Akşamcı yaz (Ara Shift yerine)"
-                                      IsChecked="{Binding TwoWorkerPreferAksam, Mode=TwoWay}"/>
+                            <CheckBox x:Name="ChkTwoWorkerPreferEvening"
+                                      Content="2 kişi kaldığında: 1 Sabahçı + 1 Akşamcı"
+                                      IsChecked="{Binding TwoWorkerPreferEvening, Mode=TwoWay}"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <!-- 5. Adalet & Önceki 2 Hafta Kuralları -->
+                <!-- 6. Schedule Rules -->
                 <Border Style="{StaticResource FluentCard}" Margin="0,0,0,10" Padding="0">
                     <StackPanel>
                         <Border Background="{DynamicResource SubtleFillBrush}" CornerRadius="11" Padding="14,10">
                             <CheckBox IsChecked="True" IsEnabled="False">
-                                <StackPanel>
-                                    <TextBlock Text="Shift Kuralları (İzin Geçişi, Adalet ve Önceki 2 Hafta)"
-                                               FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap"/>
-                                    <TextBlock Text="Haftalık adalet ve benzeşme önleme davranışları"
-                                               FontSize="11.5" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
-                                </StackPanel>
+                                <TextBlock x:Name="TxtRulesHeader"
+                                           Text="Shift Kuralları"
+                                           FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap"/>
                             </CheckBox>
                         </Border>
                         <StackPanel Margin="14,12,14,14">
-                            <CheckBox Content="İzin öncesi Sabahçı, izin sonrası Akşamcı yaz (Kural 2)"
+                            <CheckBox x:Name="ChkRuleBeforeAfter"
+                                      Content="İzin öncesi Sabahçı, izin sonrası Akşamcı"
                                       IsChecked="{Binding EnableRuleBeforeAfterLeave, Mode=TwoWay}"
                                       Margin="0,0,0,8"/>
-                            <CheckBox Content="Sabahçı + Ara Shift'i aynı kategoride toplayıp eşit dağıt (Kural 4)"
+                            <CheckBox x:Name="ChkRuleFair"
+                                      Content="Sabahçı + Ara Shift eşit dağıtılsın"
                                       IsChecked="{Binding EnableFairEarlyDistribution, Mode=TwoWay}"
                                       Margin="0,0,0,8"/>
-                            <CheckBox Content="Önceki 2 haftanın shiftini kontrol edip farklılık sağla (Kural 5)"
+                            <CheckBox x:Name="ChkRuleHistory"
+                                      Content="Önceki 2 haftayla farklılık sağla"
                                       IsChecked="{Binding EnableHistoryComparison, Mode=TwoWay}"
                                       Margin="0,0,0,8"/>
-                            <CheckBox Content="İşin içinden çıkılamadığında önceki hafta farklılık koşulunu esnet"
+                            <CheckBox x:Name="ChkRuleHistoryRelax"
+                                      Content="Gerektiğinde önceki hafta koşulunu esnet"
                                       IsChecked="{Binding AllowHistoryRelaxation, Mode=TwoWay}"
                                       Margin="22,0,0,0"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <!-- 6. Görsel Çıktı Ayarları -->
+                <!-- 7. Export Settings -->
                 <Border Style="{StaticResource FluentCard}" Margin="0,0,0,4" Padding="0">
                     <StackPanel>
                         <Border Background="{DynamicResource SubtleFillBrush}" CornerRadius="11" Padding="14,10">
@@ -332,27 +311,26 @@
                                       IsChecked="{Binding EnableExportCustomization, Mode=TwoWay}"
                                       Checked="SectionToggle_Changed"
                                       Unchecked="SectionToggle_Changed">
-                                <StackPanel>
-                                    <TextBlock Text="Paylaşılabilir Görsel Çıktı (PNG / JPG) &amp; Tablo Ayarları"
-                                               FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap"/>
-                                    <TextBlock Text="Dosya formatı ve tablo üzerinde saat/özet görünümü"
-                                               FontSize="11.5" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap"/>
-                                </StackPanel>
+                                <TextBlock x:Name="TxtExportHeader"
+                                           Text="Görsel Çıktı (PNG / JPG) &amp; Tablo"
+                                           FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap"/>
                             </CheckBox>
                         </Border>
                         <StackPanel Margin="14,12,14,14"
                                     Visibility="{Binding IsChecked, ElementName=ChkExportCustomization, Converter={StaticResource BoolToVis}}">
                             <WrapPanel Orientation="Horizontal" Margin="0,0,0,10">
-                                <TextBlock Text="Görsel Kayıt Formatı:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,2,10,2"/>
+                                <TextBlock x:Name="LblExportFormat" Text="Görsel Formatı:" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,2,10,2"/>
                                 <ComboBox x:Name="CmbExportFormat" Width="190" SelectionChanged="CmbExportFormat_SelectionChanged">
-                                    <ComboBoxItem Content="PNG (Yüksek Kalite)" Tag="0"/>
-                                    <ComboBoxItem Content="JPG (Paylaşım Dostu)" Tag="1"/>
+                                    <ComboBoxItem Content="PNG" Tag="0"/>
+                                    <ComboBoxItem Content="JPG" Tag="1"/>
                                 </ComboBox>
                             </WrapPanel>
-                            <CheckBox Content="Tablo hücrelerinin içinde mesai saatlerini de göster (ör. 09:00 - 18:00)"
+                            <CheckBox x:Name="ChkShowHours"
+                                      Content="Hücre içinde mesai saatlerini göster"
                                       IsChecked="{Binding ShowHoursInTable, Mode=TwoWay}"
                                       Margin="0,0,0,8"/>
-                            <CheckBox Content="Tablo sağında Sabah+Ara ve Akşam özet sütunlarını göster"
+                            <CheckBox x:Name="ChkShowSummary"
+                                      Content="Sağda özet sütunlarını göster"
                                       IsChecked="{Binding ShowSummaryColumns, Mode=TwoWay}"/>
                         </StackPanel>
                     </StackPanel>
@@ -363,16 +341,19 @@
 
         <!-- Footer Buttons -->
         <DockPanel Grid.Row="2" Margin="0,14,0,0">
-            <Button Content="Varsayılana Sıfırla"
+            <Button x:Name="BtnResetDefaults"
+                    Content="Varsayılana Sıfırla"
                     Style="{StaticResource SecondaryButton}"
                     DockPanel.Dock="Left"
                     Click="BtnResetDefaults_Click"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Content="İptal"
+                <Button x:Name="BtnCancel"
+                        Content="İptal"
                         Style="{StaticResource SecondaryButton}"
                         Margin="0,0,10,0"
                         Click="BtnCancel_Click"/>
-                <Button Content="✓ Ayarları Uygula"
+                <Button x:Name="BtnSave"
+                        Content="✓ Uygula"
                         Style="{StaticResource PrimaryButton}"
                         Click="BtnSave_Click"/>
             </StackPanel>

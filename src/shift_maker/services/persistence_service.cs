@@ -1,4 +1,3 @@
-// Hey! Sonunda beni bulabildin, seni tebrik ediyorum. <3
 // made by c4brky
 using System;
 using System.Collections.Generic;
@@ -6,9 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using ShiftHazirlayici.Models;
+using ShiftMaker.Models;
 
-namespace ShiftHazirlayici.Services;
+namespace ShiftMaker.Services;
 
 public class PersistenceService
 {
@@ -27,12 +26,12 @@ public class PersistenceService
     public PersistenceService(string? customRootDirectory = null)
     {
         _appDataRoot = customRootDirectory ??
-                       Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ShiftHazirlayici");
+                       Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ShiftMaker");
         Directory.CreateDirectory(_appDataRoot);
 
         _autoSaveFilePath = Path.Combine(_appDataRoot, "autosave_state.json");
         _autoSaveTempPath = Path.Combine(_appDataRoot, "autosave_state.tmp");
-        _historyFolderPath = Path.Combine(_appDataRoot, "History");
+        _historyFolderPath = Path.Combine(_appDataRoot, "history");
         Directory.CreateDirectory(_historyFolderPath);
         _historyIndexPath = Path.Combine(_historyFolderPath, "history_index.json");
     }
@@ -43,14 +42,14 @@ public class PersistenceService
     {
         var candidates = new[]
         {
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "ShiftKayitlari"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ShiftKayitlari"),
-            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ShiftHazirlayici", "Kayitlar")
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "ShiftMakerExports"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "ShiftMakerExports"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ShiftMaker", "Exports")
         };
 
         foreach (var candidate in candidates)
         {
-            if (string.IsNullOrWhiteSpace(candidate) || candidate.StartsWith("ShiftKayitlari", StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(candidate))
                 continue;
             try
             {
@@ -63,7 +62,7 @@ public class PersistenceService
             }
         }
 
-        string fallback = Path.Combine(AppContext.BaseDirectory, "Kayitlar");
+        string fallback = Path.Combine(AppContext.BaseDirectory, "exports");
         Directory.CreateDirectory(fallback);
         return fallback;
     }
@@ -85,7 +84,6 @@ public class PersistenceService
         }
         catch
         {
-            // Fall back to temp backup if main file was interrupted
             try
             {
                 if (File.Exists(_autoSaveTempPath))
@@ -113,26 +111,32 @@ public class PersistenceService
         if (string.IsNullOrWhiteSpace(state.SaveFolderPath))
             state.SaveFolderPath = GetDefaultSaveFolder();
 
-        if (state.TargetMondayDate == default)
-            state.TargetMondayDate = WeekDateHelper.GetMonday(DateTime.Today);
+        if (state.TargetStartDate == default)
+            state.TargetStartDate = WeekDateHelper.GetMonday(DateTime.Today);
         else
-            state.TargetMondayDate = WeekDateHelper.GetMonday(state.TargetMondayDate);
+            state.TargetStartDate = state.TargetStartDate.Date;
 
         state.Settings ??= new CustomizationSettings();
-        state.Settings.SabahTime ??= new ShiftTimeRange { StartHour = 9, StartMinute = 0, EndHour = 18, EndMinute = 0 };
-        state.Settings.AraTime ??= new ShiftTimeRange { StartHour = 11, StartMinute = 0, EndHour = 20, EndMinute = 0 };
-        state.Settings.AksamTime ??= new ShiftTimeRange { StartHour = 13, StartMinute = 0, EndHour = 22, EndMinute = 0 };
+        state.Settings.MorningTime ??= new ShiftTimeRange { StartHour = 9, StartMinute = 0, EndHour = 18, EndMinute = 0 };
+        state.Settings.MidTime ??= new ShiftTimeRange { StartHour = 11, StartMinute = 0, EndHour = 20, EndMinute = 0 };
+        state.Settings.EveningTime ??= new ShiftTimeRange { StartHour = 13, StartMinute = 0, EndHour = 22, EndMinute = 0 };
         state.Settings.FullTime ??= new ShiftTimeRange { StartHour = 9, StartMinute = 0, EndHour = 22, EndMinute = 0 };
         state.Settings.FullPersonIdByDay = CustomizationSettings.NormalizeFullList(state.Settings.FullPersonIdByDay);
+
+        if (string.IsNullOrWhiteSpace(state.Settings.MorningColorKey)) state.Settings.MorningColorKey = ShiftColorPalette.GetDefaultKey(ShiftType.Morning);
+        if (string.IsNullOrWhiteSpace(state.Settings.MidColorKey)) state.Settings.MidColorKey = ShiftColorPalette.GetDefaultKey(ShiftType.Mid);
+        if (string.IsNullOrWhiteSpace(state.Settings.EveningColorKey)) state.Settings.EveningColorKey = ShiftColorPalette.GetDefaultKey(ShiftType.Evening);
+        if (string.IsNullOrWhiteSpace(state.Settings.FullColorKey)) state.Settings.FullColorKey = ShiftColorPalette.GetDefaultKey(ShiftType.Full);
+        if (string.IsNullOrWhiteSpace(state.Settings.OffColorKey)) state.Settings.OffColorKey = ShiftColorPalette.GetDefaultKey(ShiftType.Off);
 
         state.People ??= new List<PersonConfig>();
         while (state.People.Count < 3)
         {
             state.People.Add(new PersonConfig { Name = $"Personel {state.People.Count + 1}" });
         }
-        if (state.People.Count > 10)
+        if (state.People.Count > 30)
         {
-            state.People = state.People.Take(10).ToList();
+            state.People = state.People.Take(30).ToList();
         }
     }
 
@@ -141,14 +145,14 @@ public class PersistenceService
         return new AppState
         {
             SaveFolderPath = GetDefaultSaveFolder(),
-            TargetMondayDate = WeekDateHelper.GetMonday(DateTime.Today),
+            TargetStartDate = WeekDateHelper.GetMonday(DateTime.Today),
             People = new List<PersonConfig>
             {
-                new() { Name = "Personel 1", LeaveMode = LeaveMode.Rastgele },
-                new() { Name = "Personel 2", LeaveMode = LeaveMode.Rastgele },
-                new() { Name = "Personel 3", LeaveMode = LeaveMode.Rastgele },
-                new() { Name = "Personel 4", LeaveMode = LeaveMode.Rastgele },
-                new() { Name = "Personel 5", LeaveMode = LeaveMode.Rastgele }
+                new() { Name = "Personel 1", LeaveMode = LeaveMode.Random },
+                new() { Name = "Personel 2", LeaveMode = LeaveMode.Random },
+                new() { Name = "Personel 3", LeaveMode = LeaveMode.Random },
+                new() { Name = "Personel 4", LeaveMode = LeaveMode.Random },
+                new() { Name = "Personel 5", LeaveMode = LeaveMode.Random }
             },
             Settings = new CustomizationSettings(),
             LastSavedAt = DateTime.Now
@@ -164,13 +168,9 @@ public class PersistenceService
         File.WriteAllText(_autoSaveTempPath, json);
 
         if (File.Exists(_autoSaveFilePath))
-        {
             File.Replace(_autoSaveTempPath, _autoSaveFilePath, null);
-        }
         else
-        {
             File.Move(_autoSaveTempPath, _autoSaveFilePath);
-        }
     }
 
     public List<WeeklySchedule> LoadHistory()
@@ -200,7 +200,6 @@ public class PersistenceService
 
         SaveHistoryList(list);
 
-        // Also store individual snapshot file
         string snapshotPath = Path.Combine(_historyFolderPath, $"{schedule.FileBaseName}_{schedule.Id[..6]}.json");
         File.WriteAllText(snapshotPath, JsonSerializer.Serialize(schedule, JsonOptions));
     }
@@ -210,6 +209,26 @@ public class PersistenceService
         var list = LoadHistory();
         list.RemoveAll(x => x.Id == scheduleId);
         SaveHistoryList(list);
+    }
+
+    public void ClearAllHistory()
+    {
+        SaveHistoryList(new List<WeeklySchedule>());
+        try
+        {
+            if (Directory.Exists(_historyFolderPath))
+            {
+                foreach (var file in Directory.GetFiles(_historyFolderPath, "*.json"))
+                {
+                    if (!string.Equals(file, _historyIndexPath, StringComparison.OrdinalIgnoreCase))
+                        File.Delete(file);
+                }
+            }
+        }
+        catch
+        {
+            // Ignore individual snapshot cleanup failures
+        }
     }
 
     private void SaveHistoryList(List<WeeklySchedule> list)

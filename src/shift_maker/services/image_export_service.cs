@@ -1,4 +1,3 @@
-// Hey! Sonunda beni bulabildin, seni tebrik ediyorum. <3
 // created by c4brky
 using System;
 using System.IO;
@@ -7,9 +6,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using ShiftHazirlayici.Models;
+using ShiftMaker.Models;
 
-namespace ShiftHazirlayici.Services;
+namespace ShiftMaker.Services;
 
 public class ImageExportService
 {
@@ -54,7 +53,8 @@ public class ImageExportService
 
     private static Border BuildExportVisual(WeeklySchedule schedule, AppThemeMode themeMode)
     {
-        bool dark = true; // Sabit antrasit koyu tema
+        bool dark = true;
+        var lang = schedule.Language;
 
         var bgBrush = new SolidColorBrush(Color.FromRgb(20, 21, 24));
         var cardBrush = new SolidColorBrush(Color.FromRgb(28, 30, 34));
@@ -87,15 +87,18 @@ public class ImageExportService
 
         var stack = new StackPanel();
 
-        // Header row
         var headerGrid = new Grid { Margin = new Thickness(0, 0, 0, 18) };
         headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
+        string startDayName = WeekDateHelper.GetDayName(schedule.WeekStartDate, 0, lang);
+        string endDayName = WeekDateHelper.GetDayName(schedule.WeekStartDate, 6, lang);
+        string staffWord = LocalizationService.T(lang, "Personel", "Staff");
+
         var titleStack = new StackPanel();
         titleStack.Children.Add(new TextBlock
         {
-            Text = $"HAFTALIK SHIFT PLANI  •  {schedule.WeekDisplayLabel}",
+            Text = schedule.WeekDisplayLabel,
             FontFamily = new FontFamily("Segoe UI Variable, Segoe UI"),
             FontSize = 24,
             FontWeight = FontWeights.Bold,
@@ -103,7 +106,7 @@ public class ImageExportService
         });
         titleStack.Children.Add(new TextBlock
         {
-            Text = $"{schedule.WeekStartMonday:dd MMMM yyyy} Pazartesi  —  {schedule.WeekEndSunday:dd MMMM yyyy} Pazar  •  {schedule.Rows.Count} Personel",
+            Text = $"{schedule.WeekStartDate:dd.MM.yyyy} {startDayName}  —  {schedule.WeekEndDate:dd.MM.yyyy} {endDayName}  •  {schedule.Rows.Count} {staffWord}",
             FontFamily = new FontFamily("Segoe UI Variable, Segoe UI"),
             FontSize = 13,
             Foreground = textMuted,
@@ -117,19 +120,18 @@ public class ImageExportService
             Orientation = Orientation.Horizontal,
             VerticalAlignment = VerticalAlignment.Center
         };
-        legendPanel.Children.Add(CreateLegendPill("Sabahçı", schedule.SabahTime.Formatted, ShiftType.Sabah, dark));
-        legendPanel.Children.Add(CreateLegendPill("Ara Shift", schedule.AraTime.Formatted, ShiftType.Ara, dark));
-        legendPanel.Children.Add(CreateLegendPill("Akşamcı", schedule.AksamTime.Formatted, ShiftType.Aksam, dark));
+        legendPanel.Children.Add(CreateLegendPill(LocalizationService.GetShiftLabel(ShiftType.Morning, lang, false), schedule.MorningTime.Formatted, ShiftType.Morning, schedule));
+        legendPanel.Children.Add(CreateLegendPill(LocalizationService.GetShiftLabel(ShiftType.Mid, lang, false), schedule.MidTime.Formatted, ShiftType.Mid, schedule));
+        legendPanel.Children.Add(CreateLegendPill(LocalizationService.GetShiftLabel(ShiftType.Evening, lang, false), schedule.EveningTime.Formatted, ShiftType.Evening, schedule));
         if (showFull)
-            legendPanel.Children.Add(CreateLegendPill("FULL", schedule.FullTime.Formatted, ShiftType.Full, dark));
-        legendPanel.Children.Add(CreateLegendPill("İzin", "Haftalık İzin", ShiftType.Izin, dark));
+            legendPanel.Children.Add(CreateLegendPill(LocalizationService.GetShiftLabel(ShiftType.Full, lang, true), schedule.FullTime.Formatted, ShiftType.Full, schedule));
+        legendPanel.Children.Add(CreateLegendPill(LocalizationService.GetShiftLabel(ShiftType.Off, lang, false), LocalizationService.GetLeaveSubLabel(lang), ShiftType.Off, schedule));
 
         Grid.SetColumn(legendPanel, 1);
         headerGrid.Children.Add(legendPanel);
 
         stack.Children.Add(headerGrid);
 
-        // Schedule Grid
         var tableBorder = new Border
         {
             BorderBrush = borderBrush,
@@ -155,18 +157,19 @@ public class ImageExportService
         for (int r = 0; r < schedule.Rows.Count; r++)
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        AddCell(grid, 0, 0, "PERSONEL", headerCellBg, cellLineColor, textDark, true, false);
+        AddCell(grid, 0, 0, LocalizationService.T(lang, "PERSONEL", "STAFF"), headerCellBg, cellLineColor, textDark, true, false);
         for (int d = 0; d < 7; d++)
         {
-            string dayHeader = WeekDateHelper.GetDayHeaderLabel(schedule.WeekStartMonday, d);
+            string dayHeader = WeekDateHelper.GetDayHeaderLabel(schedule.WeekStartDate, d, lang);
             AddCell(grid, 0, d + 1, dayHeader, headerCellBg, cellLineColor, textDark, true, true);
         }
         if (schedule.ShowSummaryColumns)
         {
-            AddCell(grid, 0, 8, "Sabah + Ara\n(Erken)", headerCellBg, cellLineColor, accentBrush, true, true);
-            AddCell(grid, 0, 9, "Akşam", headerCellBg, cellLineColor, textDark, true, true);
+            var fullPreset = ShiftColorPalette.GetPreset(schedule.FullColorKey, ShiftType.Full);
+            AddCell(grid, 0, 8, LocalizationService.T(lang, "Sabah + Ara\n(Erken)", "Morning + Mid\n(Early)"), headerCellBg, cellLineColor, accentBrush, true, true);
+            AddCell(grid, 0, 9, LocalizationService.GetShiftLabel(ShiftType.Evening, lang, false), headerCellBg, cellLineColor, textDark, true, true);
             if (showFull)
-                AddCell(grid, 0, 10, "Full", headerCellBg, cellLineColor, new SolidColorBrush(dark ? Color.FromRgb(253, 164, 175) : Color.FromRgb(190, 18, 60)), true, true);
+                AddCell(grid, 0, 10, "Full", headerCellBg, cellLineColor, new SolidColorBrush(fullPreset.Fg), true, true);
         }
 
         for (int r = 0; r < schedule.Rows.Count; r++)
@@ -186,20 +189,24 @@ public class ImageExportService
 
             if (schedule.ShowSummaryColumns)
             {
-                AddCell(grid, r + 1, 8, $"{row.EarlyTotal} ({row.SabahCount}S+{row.AraCount}A)", rowBg, cellLineColor, accentBrush, true, true);
-                AddCell(grid, r + 1, 9, $"{row.AksamCount}", rowBg, cellLineColor, textDark, false, true);
+                var fullPreset = ShiftColorPalette.GetPreset(schedule.FullColorKey, ShiftType.Full);
+                string mAbbr = lang == AppLanguage.En ? "M" : "S";
+                string midAbbr = lang == AppLanguage.En ? "Mid" : "A";
+                AddCell(grid, r + 1, 8, $"{row.EarlyTotal} ({row.MorningCount}{mAbbr}+{row.MidCount}{midAbbr})", rowBg, cellLineColor, accentBrush, true, true);
+                AddCell(grid, r + 1, 9, $"{row.EveningCount}", rowBg, cellLineColor, textDark, false, true);
                 if (showFull)
                     AddCell(grid, r + 1, 10, $"{row.FullCount}", rowBg, cellLineColor,
-                        new SolidColorBrush(dark ? Color.FromRgb(253, 164, 175) : Color.FromRgb(190, 18, 60)), row.FullCount > 0, true);
+                        new SolidColorBrush(fullPreset.Fg), row.FullCount > 0, true);
             }
         }
 
         tableBorder.Child = grid;
         stack.Children.Add(tableBorder);
 
+        string createdLabel = LocalizationService.T(lang, "Oluşturulma", "Created");
         var footer = new TextBlock
         {
-            Text = $"Oluşturulma: {schedule.CreatedAt:dd.MM.yyyy HH:mm}  •  SHIFT HAZIRLAYICI",
+            Text = $"{createdLabel}: {schedule.CreatedAt:dd.MM.yyyy HH:mm}  •  SHIFT MAKER",
             FontFamily = new FontFamily("Segoe UI Variable, Segoe UI"),
             FontSize = 11,
             Foreground = textMuted,
@@ -217,30 +224,36 @@ public class ImageExportService
         ShiftType st,
         WeeklySchedule? schedule,
         bool dark,
-        ShiftTimeRange? sabahFallback = null,
-        ShiftTimeRange? araFallback = null,
-        ShiftTimeRange? aksamFallback = null,
-        ShiftTimeRange? fullFallback = null)
+        CustomizationSettings? settings = null)
     {
-        string sabahSub = schedule?.SabahTime.Formatted ?? sabahFallback?.Formatted ?? "";
-        string araSub = schedule?.AraTime.Formatted ?? araFallback?.Formatted ?? "";
-        string aksamSub = schedule?.AksamTime.Formatted ?? aksamFallback?.Formatted ?? "";
-        string fullSub = schedule?.FullTime.Formatted ?? fullFallback?.Formatted ?? "";
+        var lang = schedule?.Language ?? settings?.Language ?? AppLanguage.Tr;
+        string morningSub = schedule?.MorningTime.Formatted ?? settings?.MorningTime.Formatted ?? "";
+        string midSub = schedule?.MidTime.Formatted ?? settings?.MidTime.Formatted ?? "";
+        string eveningSub = schedule?.EveningTime.Formatted ?? settings?.EveningTime.Formatted ?? "";
+        string fullSub = schedule?.FullTime.Formatted ?? settings?.FullTime.Formatted ?? "";
 
-        return st switch
+        string colorKey = schedule != null
+            ? ShiftColorPalette.GetKeyForShift(st, schedule)
+            : ShiftColorPalette.GetKeyForShift(st, settings);
+
+        var preset = ShiftColorPalette.GetPreset(colorKey, st);
+        string label = LocalizationService.GetShiftLabel(st, lang, true);
+        string sub = st switch
         {
-            ShiftType.Sabah => ("SABAHÇI", sabahSub, Color.FromRgb(46, 37, 19), Color.FromRgb(146, 107, 29), Color.FromRgb(251, 191, 36)),
-            ShiftType.Ara => ("ARA SHIFT", araSub, Color.FromRgb(20, 37, 59), Color.FromRgb(37, 99, 235), Color.FromRgb(125, 211, 252)),
-            ShiftType.Aksam => ("AKŞAMCI", aksamSub, Color.FromRgb(44, 48, 56), Color.FromRgb(82, 88, 102), Color.FromRgb(209, 213, 219)),
-            ShiftType.Izin => ("İZİN", "Dinlenme", Color.FromRgb(18, 43, 34), Color.FromRgb(16, 185, 129), Color.FromRgb(110, 231, 183)),
-            ShiftType.Full => ("FULL", fullSub, Color.FromRgb(53, 22, 33), Color.FromRgb(225, 29, 72), Color.FromRgb(253, 164, 175)),
-            _ => ("-", "", Colors.Transparent, Colors.Transparent, Colors.Gray)
+            ShiftType.Morning => morningSub,
+            ShiftType.Mid => midSub,
+            ShiftType.Evening => eveningSub,
+            ShiftType.Off => LocalizationService.GetLeaveSubLabel(lang),
+            ShiftType.Full => fullSub,
+            _ => ""
         };
+
+        return (label, sub, preset.Bg, preset.Border, preset.Fg);
     }
 
-    private static Border CreateLegendPill(string title, string sub, ShiftType st, bool dark)
+    private static Border CreateLegendPill(string title, string sub, ShiftType st, WeeklySchedule schedule)
     {
-        var (_, _, bg, border, fg) = GetShiftColors(st, null, dark);
+        var (_, _, bg, border, fg) = GetShiftColors(st, schedule, true);
         var b = new Border
         {
             Background = new SolidColorBrush(bg),

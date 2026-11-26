@@ -1,11 +1,10 @@
-// Hey! Sonunda beni bulabildin, seni tebrik ediyorum. <3
 // created by c4brky
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using ShiftHazirlayici.Models;
+using ShiftMaker.Models;
 
-namespace ShiftHazirlayici.Services;
+namespace ShiftMaker.Services;
 
 public class ShiftGenerationResult
 {
@@ -23,12 +22,19 @@ public class ShiftGeneratorService
         IReadOnlyList<WeeklySchedule> recentSchedules,
         int? seed = null)
     {
-        if (people == null || people.Count < 3 || people.Count > 10)
+        var lang = settings.Language;
+        var weekStart = targetDate.Date;
+        var weekEnd = weekStart.AddDays(6);
+
+        if (people == null || people.Count < 3 || people.Count > 30)
         {
             return new ShiftGenerationResult
             {
                 Success = false,
-                ErrorMessage = "Personel sayısı en az 3, en fazla 10 kişi olmalıdır."
+                ErrorMessage = LocalizationService.T(
+                    lang,
+                    "Personel sayısı en az 3, en fazla 30 kişi olmalıdır.",
+                    "Staff count must be between 3 and 30.")
             };
         }
 
@@ -38,7 +44,10 @@ public class ShiftGeneratorService
             return new ShiftGenerationResult
             {
                 Success = false,
-                ErrorMessage = "Lütfen shift oluşturulacak tüm kişilerin isimlerini doldurun."
+                ErrorMessage = LocalizationService.T(
+                    lang,
+                    "Lütfen shift oluşturulacak tüm kişilerin isimlerini doldurun.",
+                    "Please fill in names for all staff members.")
             };
         }
 
@@ -50,30 +59,34 @@ public class ShiftGeneratorService
             return new ShiftGenerationResult
             {
                 Success = false,
-                ErrorMessage = $"Aynı isim birden fazla kez eklenmiş: \"{duplicateName.Key}\". Lütfen kişilere ayırt edici isimler verin."
+                ErrorMessage = LocalizationService.T(
+                    lang,
+                    $"Aynı isim birden fazla kez eklenmiş: \"{duplicateName.Key}\". Lütfen kişilere ayırt edici isimler verin.",
+                    $"Duplicate name detected: \"{duplicateName.Key}\". Please use unique names.")
             };
         }
 
-        // Validate manual leave overlaps if not in bulk/no-leave mode and overlap not allowed
-        if (!settings.BulkSundayLeave && !settings.NoLeaveForAll && !settings.AllowLeaveOverlap)
+        if (!settings.BulkLastDayLeave && !settings.NoLeaveForAll && !settings.AllowLeaveOverlap)
         {
             var manualOverlap = people
-                .Where(p => p.LeaveMode == LeaveMode.BelirliGun)
+                .Where(p => p.LeaveMode == LeaveMode.FixedDay)
                 .GroupBy(p => p.SelectedDayIndex)
                 .FirstOrDefault(g => g.Count() > 1);
 
             if (manualOverlap != null)
             {
-                string dayName = PersonConfig.DayNamesTr[Math.Clamp(manualOverlap.Key, 0, 6)];
+                string dayName = WeekDateHelper.GetDayName(weekStart, Math.Clamp(manualOverlap.Key, 0, 6), lang);
                 return new ShiftGenerationResult
                 {
                     Success = false,
-                    ErrorMessage = $"İzinler çakışamaz: Birden fazla kişiye '{dayName}' günü manuel izin atanmış. Lütfen günleri değiştirin veya Özelleştir bölümünden izin çakışmasına izin verin."
+                    ErrorMessage = LocalizationService.T(
+                        lang,
+                        $"İzinler çakışamaz: Birden fazla kişiye '{dayName}' günü manuel izin atanmış. Lütfen günleri değiştirin veya Özelleştir bölümünden izin çakışmasına izin verin.",
+                        $"Leave overlap is disabled: Multiple people have fixed leave on '{dayName}'. Please change days or allow overlap in Customize.")
                 };
             }
         }
 
-        // Resolve optional Full-day assignments (dayIndex -> personIndex)
         var fullPersonByDay = new int?[7];
         var fullDaysForPerson = Enumerable.Range(0, people.Count).Select(_ => new HashSet<int>()).ToArray();
         bool hasAnyFull = false;
@@ -98,24 +111,30 @@ public class ShiftGeneratorService
 
                 if (pIdx < 0) continue;
 
-                // Check conflict with explicit leave on the same day
                 if (!settings.NoLeaveForAll)
                 {
-                    if (settings.BulkSundayLeave && d == 6)
+                    string dayName = WeekDateHelper.GetDayName(weekStart, d, lang);
+                    if (settings.BulkLastDayLeave && d == 6)
                     {
                         return new ShiftGenerationResult
                         {
                             Success = false,
-                            ErrorMessage = $"Çakışma: '{trimmedNames[pIdx]}' Pazar günü hem Toplu İzinli hem Full seçilmiş. Pazar Full seçimini kaldırın veya Toplu Pazar İznini kapatın."
+                            ErrorMessage = LocalizationService.T(
+                                lang,
+                                $"Çakışma: '{trimmedNames[pIdx]}' {dayName} günü hem Toplu İzinli hem Full seçilmiş.",
+                                $"Conflict: '{trimmedNames[pIdx]}' has both Bulk Leave and Full Shift on {dayName}.")
                         };
                     }
 
-                    if (!settings.BulkSundayLeave && people[pIdx].LeaveMode == LeaveMode.BelirliGun && people[pIdx].SelectedDayIndex == d)
+                    if (!settings.BulkLastDayLeave && people[pIdx].LeaveMode == LeaveMode.FixedDay && people[pIdx].SelectedDayIndex == d)
                     {
                         return new ShiftGenerationResult
                         {
                             Success = false,
-                            ErrorMessage = $"Çakışma: '{trimmedNames[pIdx]}' {PersonConfig.DayNamesTr[d]} günü hem manuel İzinli hem Full seçilmiş."
+                            ErrorMessage = LocalizationService.T(
+                                lang,
+                                $"Çakışma: '{trimmedNames[pIdx]}' {dayName} günü hem manuel İzinli hem Full seçilmiş.",
+                                $"Conflict: '{trimmedNames[pIdx]}' has both fixed Leave and Full Shift on {dayName}.")
                         };
                     }
                 }
@@ -126,12 +145,9 @@ public class ShiftGeneratorService
             }
         }
 
-        var monday = WeekDateHelper.GetMonday(targetDate);
-        var sunday = monday.AddDays(6);
-
         var priorWeeks = recentSchedules
-            .Where(s => s.WeekStartMonday.Date < monday.Date)
-            .OrderByDescending(s => s.WeekStartMonday)
+            .Where(s => s.WeekStartDate.Date < weekStart.Date)
+            .OrderByDescending(s => s.WeekStartDate)
             .ThenByDescending(s => s.CreatedAt)
             .Take(2)
             .ToList();
@@ -152,14 +168,14 @@ public class ShiftGeneratorService
 
         int[] candidateScopeDays = settings.RandomLeaveScope switch
         {
-            RandomLeaveScope.HaftaIciPztCum => new[] { 0, 1, 2, 3, 4 },
-            RandomLeaveScope.PztCumartesi => new[] { 0, 1, 2, 3, 4, 5 },
+            RandomLeaveScope.FirstFiveDays => new[] { 0, 1, 2, 3, 4 },
+            RandomLeaveScope.FirstSixDays => new[] { 0, 1, 2, 3, 4, 5 },
             _ => new[] { 0, 1, 2, 3, 4, 5, 6 }
         };
 
         var warnings = new List<string>();
-        bool hasRandomLeave = !settings.BulkSundayLeave && !settings.NoLeaveForAll &&
-                              people.Any(p => p.LeaveMode == LeaveMode.Rastgele);
+        bool hasRandomLeave = !settings.BulkLastDayLeave && !settings.NoLeaveForAll &&
+                              people.Any(p => p.LeaveMode == LeaveMode.Random);
 
         int leaveTrials = hasRandomLeave ? 18 : 1;
         int scheduleRestartsPerLeave = 30;
@@ -172,9 +188,9 @@ public class ShiftGeneratorService
         {
             int?[] leaveDays = AssignLeaveDays(people, settings, candidateScopeDays, fullDaysForPerson, prev1, prev2, rng);
 
-            var reqSabah = new int[7];
-            var reqAra = new int[7];
-            var reqAksam = new int[7];
+            var reqMorning = new int[7];
+            var reqMid = new int[7];
+            var reqEvening = new int[7];
 
             for (int d = 0; d < 7; d++)
             {
@@ -186,12 +202,12 @@ public class ShiftGeneratorService
                     regularWorkers++;
                 }
 
-                ComputeDailyQuotas(regularWorkers, settings, out reqSabah[d], out reqAra[d], out reqAksam[d]);
+                ComputeDailyQuotas(regularWorkers, settings, out reqMorning[d], out reqMid[d], out reqEvening[d]);
             }
 
             for (int restart = 0; restart < scheduleRestartsPerLeave; restart++)
             {
-                var grid = BuildInitialGrid(n, leaveDays, fullPersonByDay, reqSabah, reqAra, reqAksam, rng);
+                var grid = BuildInitialGrid(n, leaveDays, fullPersonByDay, reqMorning, reqMid, reqEvening, rng);
                 OptimizeSwaps(grid, n, trimmedNames, leaveDays, settings, prev1, prev2, rng);
 
                 long score = EvaluateScore(grid, n, trimmedNames, leaveDays, settings, prev1, prev2, out _, out _, out _);
@@ -211,7 +227,10 @@ public class ShiftGeneratorService
             return new ShiftGenerationResult
             {
                 Success = false,
-                ErrorMessage = "Shift planı oluşturulurken beklenmeyen bir hata oluştu."
+                ErrorMessage = LocalizationService.T(
+                    lang,
+                    "Shift planı oluşturulurken beklenmeyen bir hata oluştu.",
+                    "An unexpected error occurred while generating the schedule.")
             };
         }
 
@@ -220,23 +239,32 @@ public class ShiftGeneratorService
 
         if (rule2Violations > 0 && settings.EnableRuleBeforeAfterLeave)
         {
-            warnings.Add($"İzin çakışması veya düşük çalışma sayısı nedeniyle 'izin öncesi sabah / sonrası akşam' kuralı {rule2Violations} noktada esnetildi.");
+            warnings.Add(LocalizationService.T(
+                lang,
+                $"İzin çakışması veya düşük çalışma sayısı nedeniyle 'izin öncesi sabah / sonrası akşam' kuralı {rule2Violations} noktada esnetildi.",
+                $"Due to leave overlaps or low staffing, the 'morning before / evening after leave' rule was relaxed at {rule2Violations} point(s)."));
         }
 
         if (rule4Diff > 1 && settings.EnableFairEarlyDistribution)
         {
-            warnings.Add("Özel koşullar nedeniyle Sabah+Ara shift dağılımında 1'den fazla fark oluştu.");
+            warnings.Add(LocalizationService.T(
+                lang,
+                "Özel koşullar nedeniyle Sabah+Ara shift dağılımında 1'den fazla fark oluştu.",
+                "Due to special constraints, Morning+Mid shift distribution differed by more than 1."));
         }
 
-        if (!settings.BulkSundayLeave && !settings.NoLeaveForAll)
+        if (!settings.BulkLastDayLeave && !settings.NoLeaveForAll)
         {
             var overlapDays = Enumerable.Range(0, 7)
                 .Where(d => bestLeaveDays.Count(ld => ld == d) > 1)
                 .ToList();
             if (overlapDays.Count > 0)
             {
-                string dayList = string.Join(", ", overlapDays.Select(d => PersonConfig.DayNamesTr[d]));
-                warnings.Add($"Kişi sayısı ve seçilen izin kapsamı nedeniyle şu gün(ler)de birden fazla kişi izinli oldu: {dayList}.");
+                string dayList = string.Join(", ", overlapDays.Select(d => WeekDateHelper.GetDayName(weekStart, d, lang)));
+                warnings.Add(LocalizationService.T(
+                    lang,
+                    $"Kişi sayısı ve seçilen izin kapsamı nedeniyle şu gün(ler)de birden fazla kişi izinli oldu: {dayList}.",
+                    $"Due to team size and leave scope, multiple staff have leave on: {dayList}."));
             }
         }
 
@@ -245,7 +273,10 @@ public class ShiftGeneratorService
             int totalCells = n * 7;
             if (historyMatches > totalCells / 3)
             {
-                warnings.Add($"Önceki {priorWeeks.Count} haftayla tam farklılık kısıtlar nedeniyle kısmen esnetildi ({historyMatches} hücre eşleşti).");
+                warnings.Add(LocalizationService.T(
+                    lang,
+                    $"Önceki {priorWeeks.Count} haftayla tam farklılık kısıtlar nedeniyle kısmen esnetildi ({historyMatches} hücre eşleşti).",
+                    $"Difference from previous {priorWeeks.Count} week(s) was partially relaxed due to constraints ({historyMatches} cells matched)."));
             }
         }
 
@@ -264,10 +295,10 @@ public class ShiftGeneratorService
                 row.Days[d] = st;
                 switch (st)
                 {
-                    case ShiftType.Sabah: row.SabahCount++; break;
-                    case ShiftType.Ara: row.AraCount++; break;
-                    case ShiftType.Aksam: row.AksamCount++; break;
-                    case ShiftType.Izin: row.IzinCount++; break;
+                    case ShiftType.Morning: row.MorningCount++; break;
+                    case ShiftType.Mid: row.MidCount++; break;
+                    case ShiftType.Evening: row.EveningCount++; break;
+                    case ShiftType.Off: row.OffCount++; break;
                     case ShiftType.Full: row.FullCount++; break;
                 }
             }
@@ -278,23 +309,29 @@ public class ShiftGeneratorService
         var schedule = new WeeklySchedule
         {
             Id = Guid.NewGuid().ToString("N"),
-            WeekStartMonday = monday,
-            WeekEndSunday = sunday,
-            WeekDisplayLabel = WeekDateHelper.GetWeekDisplayLabel(monday),
-            FileBaseName = WeekDateHelper.GetSafeFileBaseName(monday),
+            WeekStartDate = weekStart,
+            WeekEndDate = weekEnd,
+            WeekDisplayLabel = WeekDateHelper.GetWeekDisplayLabel(weekStart),
+            FileBaseName = WeekDateHelper.GetSafeFileBaseName(weekStart),
             CreatedAt = DateTime.Now,
-            SabahTime = settings.SabahTime.Clone(),
-            AraTime = settings.AraTime.Clone(),
-            AksamTime = settings.AksamTime.Clone(),
+            MorningTime = settings.MorningTime.Clone(),
+            MidTime = settings.MidTime.Clone(),
+            EveningTime = settings.EveningTime.Clone(),
             FullTime = settings.FullTime.Clone(),
             Rows = rows,
-            AppliedRules = BuildActiveRulesList(people, settings, priorWeeks.Count),
+            AppliedRules = BuildActiveRulesList(people, settings, priorWeeks.Count, weekStart),
             Warnings = warnings,
             ShowHoursInTable = settings.ShowHoursInTable,
             ShowSummaryColumns = settings.ShowSummaryColumns,
             HasFullShifts = hasAnyFull,
             ComparedHistoryWeeksCount = priorWeeks.Count,
-            SimilarityOverlapCount = historyMatches
+            SimilarityOverlapCount = historyMatches,
+            Language = settings.Language,
+            MorningColorKey = settings.MorningColorKey,
+            MidColorKey = settings.MidColorKey,
+            EveningColorKey = settings.EveningColorKey,
+            FullColorKey = settings.FullColorKey,
+            OffColorKey = settings.OffColorKey
         };
 
         return new ShiftGenerationResult
@@ -319,7 +356,7 @@ public class ShiftGeneratorService
         if (settings.NoLeaveForAll)
             return leaveDays;
 
-        if (settings.BulkSundayLeave)
+        if (settings.BulkLastDayLeave)
         {
             for (int p = 0; p < n; p++) leaveDays[p] = 6;
             return leaveDays;
@@ -329,7 +366,7 @@ public class ShiftGeneratorService
 
         for (int p = 0; p < n; p++)
         {
-            if (people[p].LeaveMode == LeaveMode.BelirliGun)
+            if (people[p].LeaveMode == LeaveMode.FixedDay)
             {
                 int d = Math.Clamp(people[p].SelectedDayIndex, 0, 6);
                 leaveDays[p] = d;
@@ -338,15 +375,36 @@ public class ShiftGeneratorService
         }
 
         var randomIndices = Enumerable.Range(0, n)
-            .Where(p => people[p].LeaveMode == LeaveMode.Rastgele)
+            .Where(p => people[p].LeaveMode == LeaveMode.Random)
             .OrderBy(_ => rng.Next())
             .ToList();
+
+        // Check who worked Morning on the last day (index 6) of the previous schedule.
+        // Only applies to random leave selection; fixed leave days remain unchanged.
+        bool hasPrevMorningOnLastDay = prev1 != null && randomIndices.Any(p =>
+        {
+            string pName = (people[p].Name ?? string.Empty).Trim();
+            return FindDayShift(prev1, pName, 6) == ShiftType.Morning;
+        });
+
+        if (hasPrevMorningOnLastDay)
+        {
+            randomIndices = randomIndices
+                .OrderByDescending(p =>
+                {
+                    string pName = (people[p].Name ?? string.Empty).Trim();
+                    return FindDayShift(prev1, pName, 6) == ShiftType.Morning ? 1 : 0;
+                })
+                .ThenBy(_ => rng.Next())
+                .ToList();
+        }
 
         foreach (int p in randomIndices)
         {
             string name = (people[p].Name ?? string.Empty).Trim();
             int? prev1Leave = FindLeaveDay(prev1, name);
             int? prev2Leave = FindLeaveDay(prev2, name);
+            bool wasMorningLastDay = prev1 != null && FindDayShift(prev1, name, 6) == ShiftType.Morning;
 
             var validDays = candidateScopeDays.Where(d => !fullDaysForPerson[p].Contains(d)).ToArray();
             if (validDays.Length == 0)
@@ -370,6 +428,15 @@ public class ShiftGeneratorService
                         if (prev1Leave == d) penalty += 50;
                         if (prev2Leave == d) penalty += 20;
                     }
+
+                    if (d == 0 && prev1 != null)
+                    {
+                        if (wasMorningLastDay)
+                            penalty -= 300;
+                        else if (hasPrevMorningOnLastDay)
+                            penalty += 300;
+                    }
+
                     return (day: d, penalty);
                 })
                 .OrderBy(x => x.penalty)
@@ -385,57 +452,57 @@ public class ShiftGeneratorService
     public static void ComputeDailyQuotas(
         int workers,
         CustomizationSettings settings,
-        out int sabah,
-        out int ara,
-        out int aksam)
+        out int morning,
+        out int mid,
+        out int evening)
     {
         if (workers <= 0)
         {
-            sabah = ara = aksam = 0;
+            morning = mid = evening = 0;
             return;
         }
 
         if (workers == 1)
         {
-            sabah = 1;
-            ara = 0;
-            aksam = 0;
+            morning = 1;
+            mid = 0;
+            evening = 0;
             return;
         }
 
         if (workers == 2)
         {
-            if (settings.TwoWorkerPreferAksam)
+            if (settings.TwoWorkerPreferEvening)
             {
-                sabah = 1;
-                ara = 0;
-                aksam = 1;
+                morning = 1;
+                mid = 0;
+                evening = 1;
             }
             else
             {
-                sabah = 1;
-                ara = 1;
-                aksam = 0;
+                morning = 1;
+                mid = 1;
+                evening = 0;
             }
             return;
         }
 
-        int targetSabah = settings.EnableDistributionCustomization ? settings.DailySabahCount : 1;
-        int targetAra = settings.EnableDistributionCustomization ? settings.DailyAraCount : 1;
+        int targetMorning = settings.EnableDistributionCustomization ? settings.DailyMorningCount : 1;
+        int targetMid = settings.EnableDistributionCustomization ? settings.DailyMidCount : 1;
 
-        sabah = Math.Clamp(targetSabah, 1, workers);
-        int remaining = workers - sabah;
-        ara = Math.Clamp(targetAra, 0, remaining);
-        aksam = workers - sabah - ara;
+        morning = Math.Clamp(targetMorning, 1, workers);
+        int remaining = workers - morning;
+        mid = Math.Clamp(targetMid, 0, remaining);
+        evening = workers - morning - mid;
     }
 
     private static ShiftType[,] BuildInitialGrid(
         int n,
         int?[] leaveDays,
         int?[] fullPersonByDay,
-        int[] reqSabah,
-        int[] reqAra,
-        int[] reqAksam,
+        int[] reqMorning,
+        int[] reqMid,
+        int[] reqEvening,
         Random rng)
     {
         var grid = new ShiftType[n, 7];
@@ -446,27 +513,21 @@ public class ShiftGeneratorService
             for (int p = 0; p < n; p++)
             {
                 if (leaveDays[p] == d)
-                {
-                    grid[p, d] = ShiftType.Izin;
-                }
+                    grid[p, d] = ShiftType.Off;
                 else if (fullPersonByDay[d] == p)
-                {
                     grid[p, d] = ShiftType.Full;
-                }
                 else
-                {
                     workingPeople.Add(p);
-                }
             }
 
             var shuffled = workingPeople.OrderBy(_ => rng.Next()).ToList();
             int idx = 0;
-            for (int i = 0; i < reqSabah[d] && idx < shuffled.Count; i++, idx++)
-                grid[shuffled[idx], d] = ShiftType.Sabah;
-            for (int i = 0; i < reqAra[d] && idx < shuffled.Count; i++, idx++)
-                grid[shuffled[idx], d] = ShiftType.Ara;
+            for (int i = 0; i < reqMorning[d] && idx < shuffled.Count; i++, idx++)
+                grid[shuffled[idx], d] = ShiftType.Morning;
+            for (int i = 0; i < reqMid[d] && idx < shuffled.Count; i++, idx++)
+                grid[shuffled[idx], d] = ShiftType.Mid;
             for (; idx < shuffled.Count; idx++)
-                grid[shuffled[idx], d] = ShiftType.Aksam;
+                grid[shuffled[idx], d] = ShiftType.Evening;
         }
 
         return grid;
@@ -496,11 +557,11 @@ public class ShiftGeneratorService
             {
                 for (int p1 = 0; p1 < n; p1++)
                 {
-                    if (grid[p1, d] == ShiftType.Izin || grid[p1, d] == ShiftType.Full) continue;
+                    if (grid[p1, d] == ShiftType.Off || grid[p1, d] == ShiftType.Full) continue;
 
                     for (int p2 = p1 + 1; p2 < n; p2++)
                     {
-                        if (grid[p2, d] == ShiftType.Izin || grid[p2, d] == ShiftType.Full) continue;
+                        if (grid[p2, d] == ShiftType.Off || grid[p2, d] == ShiftType.Full) continue;
                         if (grid[p1, d] == grid[p2, d]) continue;
 
                         (grid[p1, d], grid[p2, d]) = (grid[p2, d], grid[p1, d]);
@@ -537,16 +598,16 @@ public class ShiftGeneratorService
         rule2Violations = 0;
         historyMatches = 0;
 
-        var sabahCounts = new int[n];
-        var araCounts = new int[n];
+        var morningCounts = new int[n];
+        var midCounts = new int[n];
         var earlyCounts = new int[n];
 
         for (int p = 0; p < n; p++)
         {
             for (int d = 0; d < 7; d++)
             {
-                if (grid[p, d] == ShiftType.Sabah) { sabahCounts[p]++; earlyCounts[p]++; }
-                else if (grid[p, d] == ShiftType.Ara) { araCounts[p]++; earlyCounts[p]++; }
+                if (grid[p, d] == ShiftType.Morning) { morningCounts[p]++; earlyCounts[p]++; }
+                else if (grid[p, d] == ShiftType.Mid) { midCounts[p]++; earlyCounts[p]++; }
             }
         }
 
@@ -567,9 +628,9 @@ public class ShiftGeneratorService
                 score += (long)(diff * diff * 20_000);
             }
 
-            int sabahDiff = sabahCounts.Max() - sabahCounts.Min();
-            if (sabahDiff > 1)
-                score += (sabahDiff - 1) * 800L;
+            int morningDiff = morningCounts.Max() - morningCounts.Min();
+            if (morningDiff > 1)
+                score += (morningDiff - 1) * 800L;
         }
 
         if (settings.EnableRuleBeforeAfterLeave && !settings.NoLeaveForAll)
@@ -577,21 +638,21 @@ public class ShiftGeneratorService
             for (int p = 0; p < n; p++)
             {
                 if (!leaveDays[p].HasValue) continue;
-                int L = leaveDays[p]!.Value;
-                bool isBulkDay = settings.BulkSundayLeave && L == 6;
+                int leaveDay = leaveDays[p]!.Value;
+                bool isBulkDay = settings.BulkLastDayLeave && leaveDay == 6;
 
-                if (L > 0 && !isBulkDay && grid[p, L - 1] != ShiftType.Izin && grid[p, L - 1] != ShiftType.Full)
+                if (leaveDay > 0 && !isBulkDay && grid[p, leaveDay - 1] != ShiftType.Off && grid[p, leaveDay - 1] != ShiftType.Full)
                 {
-                    if (grid[p, L - 1] != ShiftType.Sabah)
+                    if (grid[p, leaveDay - 1] != ShiftType.Morning)
                     {
                         rule2Violations++;
                         score += 100_000L;
                     }
                 }
 
-                if (L < 6 && !isBulkDay && grid[p, L + 1] != ShiftType.Izin && grid[p, L + 1] != ShiftType.Full)
+                if (leaveDay < 6 && !isBulkDay && grid[p, leaveDay + 1] != ShiftType.Off && grid[p, leaveDay + 1] != ShiftType.Full)
                 {
-                    if (grid[p, L + 1] != ShiftType.Aksam)
+                    if (grid[p, leaveDay + 1] != ShiftType.Evening)
                     {
                         rule2Violations++;
                         score += 100_000L;
@@ -624,7 +685,7 @@ public class ShiftGeneratorService
             int streak = 0;
             for (int d = 0; d < 7; d++)
             {
-                if (grid[p, d] == ShiftType.Sabah)
+                if (grid[p, d] == ShiftType.Morning)
                 {
                     streak++;
                     if (streak >= 3) score += 25L;
@@ -646,13 +707,20 @@ public class ShiftGeneratorService
             string.Equals(r.PersonName?.Trim(), name, StringComparison.OrdinalIgnoreCase));
     }
 
+    private static ShiftType? FindDayShift(WeeklySchedule? schedule, string name, int dayIndex)
+    {
+        var row = FindPersonRow(schedule, name);
+        if (row?.Days == null || dayIndex < 0 || dayIndex >= row.Days.Length) return null;
+        return row.Days[dayIndex];
+    }
+
     private static int? FindLeaveDay(WeeklySchedule? schedule, string name)
     {
         var row = FindPersonRow(schedule, name);
         if (row?.Days == null) return null;
         for (int d = 0; d < 7; d++)
         {
-            if (row.Days[d] == ShiftType.Izin) return d;
+            if (row.Days[d] == ShiftType.Off) return d;
         }
         return null;
     }
@@ -660,36 +728,57 @@ public class ShiftGeneratorService
     public static List<string> BuildActiveRulesList(
         IReadOnlyList<PersonConfig> people,
         CustomizationSettings settings,
-        int previousWeeksFoundCount)
+        int previousWeeksFoundCount,
+        DateTime? weekStartDate = null)
     {
+        var lang = settings.Language;
+        var start = (weekStartDate ?? DateTime.Today).Date;
         var rules = new List<string>();
         int count = people.Count;
 
-        rules.Add($"Personel Kapsamı: Toplam {count} kişi için Pazartesi - Pazar haftalık plan hazırlanacak (Min 3, Max 10 kişi).");
+        string startName = WeekDateHelper.GetDayName(start, 0, lang);
+        string endName = WeekDateHelper.GetDayName(start, 6, lang);
+        rules.Add(LocalizationService.T(
+            lang,
+            $"Personel Kapsamı: {count} kişi için {startName} - {endName} haftalık plan hazırlanacak (Min 3, Max 30 kişi).",
+            $"Staff Scope: {startName} - {endName} weekly plan for {count} staff (Min 3, Max 30)."));
 
         if (settings.NoLeaveForAll)
         {
-            rules.Add("İzin Kuralı: Tüm personel için izin kapatıldı (Bu hafta kimseye izin yazılmayacak).");
+            rules.Add(LocalizationService.T(
+                lang,
+                "İzin Kuralı: Tüm personel için izin kapatıldı.",
+                "Leave Rule: Leave is disabled for all staff this week."));
         }
-        else if (settings.BulkSundayLeave)
+        else if (settings.BulkLastDayLeave)
         {
-            rules.Add("İzin Kuralı (Toplu Seçim): Toplu Pazar İzni aktif — tüm ekip Pazar günü izinli olacak, Pazartesi-Cumartesi normal çalışacak.");
+            rules.Add(LocalizationService.T(
+                lang,
+                $"İzin Kuralı (Toplu Seçim): Tüm ekip {endName} günü izinli olacak.",
+                $"Leave Rule (Bulk): All staff are off on {endName}."));
         }
         else
         {
-            int manualCount = people.Count(p => p.LeaveMode == LeaveMode.BelirliGun);
-            int randomCount = people.Count(p => p.LeaveMode == LeaveMode.Rastgele);
-            int noLeaveCount = people.Count(p => p.LeaveMode == LeaveMode.IzinYok);
+            int manualCount = people.Count(p => p.LeaveMode == LeaveMode.FixedDay);
+            int randomCount = people.Count(p => p.LeaveMode == LeaveMode.Random);
+            int noLeaveCount = people.Count(p => p.LeaveMode == LeaveMode.NoLeave);
+            string d0 = WeekDateHelper.GetDayName(start, 0, lang);
+            string d4 = WeekDateHelper.GetDayName(start, 4, lang);
+            string d5 = WeekDateHelper.GetDayName(start, 5, lang);
+            string d6 = WeekDateHelper.GetDayName(start, 6, lang);
             string scopeText = settings.RandomLeaveScope switch
             {
-                RandomLeaveScope.HaftaIciPztCum => "Hafta içi (Pzt-Cum)",
-                RandomLeaveScope.PztCumartesi => "Pzt-Cmt",
-                _ => "Tüm hafta (Pzt-Paz)"
+                RandomLeaveScope.FirstFiveDays => $"{d0} - {d4}",
+                RandomLeaveScope.FirstSixDays => $"{d0} - {d5}",
+                _ => $"{d0} - {d6}"
             };
             string overlapText = settings.AllowLeaveOverlap
-                ? "Çakışmaya izin verildi"
-                : "İzinler çakışmayacak (kapasite izin verdiği sürece)";
-            rules.Add($"İzin Kuralı: {manualCount} sabit gün, {randomCount} rastgele ({scopeText}), {noLeaveCount} izin yok • {overlapText}.");
+                ? LocalizationService.T(lang, "Çakışmaya izin verildi", "Overlap allowed")
+                : LocalizationService.T(lang, "İzinler çakışmayacak", "No overlap");
+            rules.Add(LocalizationService.T(
+                lang,
+                $"İzin Kuralı: {manualCount} sabit gün, {randomCount} rastgele ({scopeText}), {noLeaveCount} izin yok • {overlapText}.",
+                $"Leave Rule: {manualCount} fixed, {randomCount} random ({scopeText}), {noLeaveCount} none • {overlapText}."));
         }
 
         if (settings.EnableFullShifts)
@@ -701,65 +790,79 @@ public class ShiftGeneratorService
                 if (string.IsNullOrWhiteSpace(fullIds[d])) continue;
                 var person = people.FirstOrDefault(p => p.Id == fullIds[d]);
                 if (person != null)
-                    fullSummary.Add($"{PersonConfig.DayNamesTr[d]}: {person.Name}");
+                    fullSummary.Add($"{WeekDateHelper.GetDayName(start, d, lang)}: {person.Name}");
             }
 
             rules.Add(fullSummary.Count > 0
-                ? $"Full Kalma ({settings.FullTime.Formatted}): {string.Join(" • ", fullSummary)}."
-                : $"Full Kalma ({settings.FullTime.Formatted}): Seçenek açık ancak henüz gün ataması yapılmadı.");
+                ? LocalizationService.T(lang, $"Full Kalma ({settings.FullTime.Formatted}): {string.Join(" • ", fullSummary)}.", $"Full Shift ({settings.FullTime.Formatted}): {string.Join(" • ", fullSummary)}.")
+                : LocalizationService.T(lang, $"Full Kalma ({settings.FullTime.Formatted}): Aktif, henüz gün seçilmedi.", $"Full Shift ({settings.FullTime.Formatted}): Enabled, no day assigned yet."));
         }
         else
         {
-            rules.Add("Full Kalma: Kapalı (İsteğe bağlı — özelleştirmeden gün gün kişi seçilebilir).");
+            rules.Add(LocalizationService.T(lang, "Full Kalma: Kapalı.", "Full Shift: Off."));
         }
 
         if (settings.NoLeaveForAll)
         {
-            rules.Add("İzin Öncesi/Sonrası: İzin kapalı olduğu için bu kural devre dışı.");
+            rules.Add(LocalizationService.T(lang, "İzin Öncesi/Sonrası: İzin kapalı olduğu için devre dışı.", "Before/After Leave: Disabled because leave is off."));
         }
-        else if (settings.BulkSundayLeave)
+        else if (settings.BulkLastDayLeave)
         {
-            rules.Add("İzin Öncesi/Sonrası: Toplu Pazar izni nedeniyle Cumartesi herkesin sabahçı olması fiziksel olarak esnetildi.");
+            rules.Add(LocalizationService.T(lang, $"İzin Öncesi/Sonrası: Toplu {endName} izni nedeniyle esnetildi.", $"Before/After Leave: Relaxed due to bulk {endName} leave."));
         }
         else if (settings.EnableRuleBeforeAfterLeave)
         {
-            rules.Add("İzin Öncesi/Sonrası: Her çalışanın izin gününden bir önceki gün Sabahçı, bir sonraki gün Akşamcı yazılacak.");
+            rules.Add(LocalizationService.T(
+                lang,
+                "İzin Öncesi/Sonrası: İzin gününden bir önceki gün Sabahçı, bir sonraki gün Akşamcı yazılır. İlk gün rastgele izinde önceki shiftin son günündeki Sabahçı kişi önceliklendirilir (sabit izin günleri değişmez).",
+                "Before/After Leave: Morning before leave, Evening after leave. For Day-1 random leave, the person who worked Morning on the previous shift's last day is prioritized (fixed leave days stay unchanged)."));
         }
         else
         {
-            rules.Add("İzin Öncesi/Sonrası: Özelleştirmeden kapatıldı.");
+            rules.Add(LocalizationService.T(lang, "İzin Öncesi/Sonrası: Kapalı.", "Before/After Leave: Off."));
         }
 
-        int sCount = settings.EnableDistributionCustomization ? settings.DailySabahCount : 1;
-        int aCount = settings.EnableDistributionCustomization ? settings.DailyAraCount : 1;
-        string twoWorkerText = settings.TwoWorkerPreferAksam
-            ? "2 kişi kaldığında 1 Sabahçı + 1 Akşamcı"
-            : "2 kişi kaldığında 1 Sabahçı + 1 Ara Shift";
-        rules.Add($"Günlük Dağılım & Saatler: Her gün {sCount} Sabahçı ({settings.SabahTime.Formatted}), {aCount} Ara Shift ({settings.AraTime.Formatted}), kalanlar Akşamcı ({settings.AksamTime.Formatted}). ({twoWorkerText}).");
+        int mCount = settings.EnableDistributionCustomization ? settings.DailyMorningCount : 1;
+        int midCount = settings.EnableDistributionCustomization ? settings.DailyMidCount : 1;
+        string twoWorkerText = settings.TwoWorkerPreferEvening
+            ? LocalizationService.T(lang, "2 kişi kaldığında 1 Sabahçı + 1 Akşamcı", "With 2 workers: 1 Morning + 1 Evening")
+            : LocalizationService.T(lang, "2 kişi kaldığında 1 Sabahçı + 1 Ara Shift", "With 2 workers: 1 Morning + 1 Mid Shift");
+        rules.Add(LocalizationService.T(
+            lang,
+            $"Günlük Dağılım & Saatler: {mCount} Sabahçı ({settings.MorningTime.Formatted}), {midCount} Ara Shift ({settings.MidTime.Formatted}), kalanlar Akşamcı ({settings.EveningTime.Formatted}). ({twoWorkerText}).",
+            $"Daily Distribution & Hours: {mCount} Morning ({settings.MorningTime.Formatted}), {midCount} Mid ({settings.MidTime.Formatted}), rest Evening ({settings.EveningTime.Formatted}). ({twoWorkerText})."));
 
         if (settings.EnableFairEarlyDistribution)
         {
-            rules.Add("Adaletli Dağılım: Sabahçı + Ara Shift aynı kategoride toplanarak kişiler arasında eşit (en fazla ±1 farkla) dağıtılacak.");
+            rules.Add(LocalizationService.T(
+                lang,
+                "Adaletli Dağılım: Sabahçı + Ara Shift aynı kategoride toplanarak eşit (±1 farkla) dağıtılır.",
+                "Fair Distribution: Morning + Mid shifts are balanced equally (±1 max difference)."));
         }
         else
         {
-            rules.Add("Adaletli Dağılım: Özelleştirmeden kapatıldı.");
+            rules.Add(LocalizationService.T(lang, "Adaletli Dağılım: Kapalı.", "Fair Distribution: Off."));
         }
 
         if (settings.EnableHistoryComparison)
         {
-            string flexText = settings.AllowHistoryRelaxation ? "çözüm sıkıştığında esnetilebilir" : "katı uygulanır";
+            string flexText = settings.AllowHistoryRelaxation
+                ? LocalizationService.T(lang, "sıkıştığında esnetilebilir", "relaxable when tight")
+                : LocalizationService.T(lang, "katı uygulanır", "strict");
             rules.Add(previousWeeksFoundCount > 0
-                ? $"Benzerlik Önleme: Önceki {previousWeeksFoundCount} kayıtlı hafta ile karşılaştırılıp farklılık sağlanacak ({flexText})."
-                : $"Benzerlik Önleme: Önceki 2 hafta kontrolü aktif (henüz geçmiş kayıt yok, rastgele üretim uygulanacak; {flexText}).");
+                ? LocalizationService.T(lang, $"Benzerlik Önleme: Önceki {previousWeeksFoundCount} hafta ile karşılaştırılır ({flexText}).", $"Similarity Check: Compared against last {previousWeeksFoundCount} week(s) ({flexText}).")
+                : LocalizationService.T(lang, $"Benzerlik Önleme: Önceki 2 hafta kontrolü aktif ({flexText}).", $"Similarity Check: Last 2 weeks check active ({flexText})."));
         }
         else
         {
-            rules.Add("Benzerlik Önleme: Geçmiş hafta kontrolü kapatıldı.");
+            rules.Add(LocalizationService.T(lang, "Benzerlik Önleme: Kapalı.", "Similarity Check: Off."));
         }
 
         string fmt = settings.ExportFormat == ImageExportFormat.Jpg ? "JPG" : "PNG";
-        rules.Add($"Kayıt & Paylaşım: Oluşturulduğunda yerel geçmişe kaydedilecek ve '{fmt}' görseli seçili klasöre aktarılacak.");
+        rules.Add(LocalizationService.T(
+            lang,
+            $"Kayıt & Paylaşım: Geçmişe kaydedilir ve '{fmt}' görseli seçili klasöre aktarılır.",
+            $"Save & Share: Saved to history and exported as '{fmt}' to the selected folder."));
 
         return rules;
     }
